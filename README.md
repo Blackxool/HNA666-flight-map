@@ -52,3 +52,31 @@
 
 🚧 请理解：本项目起初是为个人需求开发，代码结构并不规范，不具备开箱即用的模块化封装。仅限于促进交流与协作，而非作为正式发布的开发包。
 
+## 目录结构
+
+- /index.html 首页（两个项目入口）
+- /HNA666/history/ 历史版本归档
+- /HNA2666/history/ 历史版本归档
+- /vercel.json Vercel 路由配置（将 /HNA666 与 /HNA2666 映射到最新版本）
+
+
+## 一键部署到 Vercel
+
+方式一：Web 控台
+1) 登录 https://vercel.com 并点击 “New Project”
+2) 选择本仓库（或导入本地代码）
+3) Framework 选择 “Other”，无需构建命令（Build Command 留空）
+4) 直接部署即可
+
+方式二：CLI
+1) npm i -g vercel
+2) vercel （首次绑定项目）
+3) vercel --prod （正式部署）
+
+部署完成后：
+- 根路径 / 显示首页
+- /HNA666 和 /HNA2666 将通过 vercel.json 路由到各自的最新版本（默认 v0822f）
+
+## 开发预览
+
+本项目为纯静态资源，可直接双击 index.html 预览；或使用任意静态服务器（如 npx serve .）进行本地调试。

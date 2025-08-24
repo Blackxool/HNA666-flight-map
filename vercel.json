@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/HNA666", "destination": "/HNA666/v0822f/HNA666_flight_map_v0822f.html" },
+    { "source": "/HNA2666", "destination": "/HNA2666/v0822f/HNA2666_flight_map_v0822f.html" }
+  ]
+}
