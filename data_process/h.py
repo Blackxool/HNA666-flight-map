@@ -9,7 +9,7 @@ import os
 
 def load_airport_coordinates():
     """加载机场坐标数据库"""
-    coord_file = '20250912/cityairport_CNname_IATA_ICAO_coords.xlsx'
+    coord_file = 'data_process/cityairport_CNname_IATA_ICAO_coords.xlsx'
     try:
         coord_df = pd.read_excel(coord_file)
         coord_df.columns = ['city_airport', 'full_name', 'iata', 'icao', 'coordinates']
@@ -1837,7 +1837,7 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
 # 主程序
 if __name__ == "__main__":
     # 统一的Excel文件路径
-    excel_file = "20250912/v0930冬春.xlsx"  # 使用新生成的文件
+    excel_file = "data_process/v0930冬春.xlsx"  # 使用新生成的文件
     
     # 处理666版本（夜间航班）- 读取666工作表
     create_flight_visualization(excel_file, sheet_name="666", version_prefix="666")
@@ -1845,4 +1845,5 @@ if __name__ == "__main__":
     
     # 处理2666版本（全部航班）- 读取2666工作表
     create_flight_visualization(excel_file, sheet_name="2666", version_prefix="2666")
+
     print(f"已生成2666html")
