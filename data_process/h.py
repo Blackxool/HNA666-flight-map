@@ -9,7 +9,7 @@ import os
 
 def load_airport_coordinates():
     """加载机场坐标数据库"""
-    coord_file = '20250912/cityairport_CNname_IATA_ICAO_coords.xlsx'
+    coord_file = 'data_process/cityairport_CNname_IATA_ICAO_coords.xlsx'
     try:
         coord_df = pd.read_excel(coord_file)
         coord_df.columns = ['city_airport', 'full_name', 'iata', 'icao', 'coordinates']
@@ -398,6 +398,11 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             }}
         }}
         
+        /* 隐藏Zoom控件 */
+        .leaflet-control-zoom {{
+            display: none !important;
+        }}
+        
         /* 控制按钮样式 - 统一样式 */
         .control-btn {{
             position: absolute;
@@ -473,6 +478,71 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             background: #E77B73 !important;
             color: white !important;
         }}
+        
+        /* 自定义图层切换器样式 */
+        .custom-layer-switcher {{
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            background: var(--background-secondary);
+            backdrop-filter: var(--backdrop-filter);
+            -webkit-backdrop-filter: var(--backdrop-filter);
+            padding: 8px;
+            border-radius: 25px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px var(--shadow-medium);
+            transition: opacity 0.3s ease;
+        }}
+        
+        .custom-layer-switcher.faded {{
+            opacity: 0.2;
+        }}
+        
+        .layer-btn {{
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--background-secondary);
+        }}
+        
+        .layer-btn:hover {{
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px var(--shadow-medium);
+            border-color: var(--border-color-dark);
+        }}
+        
+        .layer-btn.active {{
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(142, 98, 137, 0.2);
+        }}
+        
+        .layer-btn.active .layer-label {{
+            color: white;
+        }}
+        
+        .layer-btn .layer-label {{
+            color: var(--text-primary);
+            font-size: 10px;
+            text-align: center;
+            font-weight: 600;
+            line-height: 1.2;
+            white-space: pre-line;
+        }}
+        
+        /* 隐藏默认的Leaflet控件 */
+        .leaflet-control-layers {{
+            display: none !important;
+        }}
                
         /* 扩展背景层 */
         .panel-backdrop {{
@@ -481,7 +551,7 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             left: 20px;
             z-index: 1001;
             width: 360px;
-            height: 310px;
+            height: 300px;
             border-radius: 37px;
             background: var(--background-secondary);
             backdrop-filter: var(--backdrop-filter);
@@ -613,30 +683,30 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         }}
         
         .checkbox-group {{
-            display: flex;  /* 改用flex布局 */
-            gap: 2px;  /* 减小间距 */
+            display: flex;
+            gap: 2px;
             margin-top: 3px;
-            width: 100%;  /* 确保占满容器宽度 */
-            justify-content: space-between;  /* 均匀分布 */
+            width: 100%;
+            justify-content: space-between;
         }}
         
         .checkbox-item {{
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px 2px;  /* 减小左右内边距 */
+            padding: 10px 2px;
             border-radius: 22px;
             background: var(--border-color);
             color: var(--text-secondary);
-            font-size: 14px;  /* 稍微减小字体 */
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             user-select: none;
             min-height: 40px;
-            flex: 1;  /* 让每个按钮等宽 */
-            min-width: 0;  /* 允许按钮缩小 */
-            max-width: 45px;  /* 限制最大宽度 */
+            flex: 1;
+            min-width: 0;
+            max-width: 45px;
         }}
         
         .checkbox-item.checked {{
@@ -648,26 +718,27 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             display: none;
         }}
         
-        /* 优化后的图例和免责声明 - 基础样式 */
+        /* 固定尺寸的图例和免责声明模块 */
         .legend-disclaimer {{
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--background-secondary);
             backdrop-filter: var(--backdrop-filter);
             -webkit-backdrop-filter: var(--backdrop-filter);
-            padding: 12px 16px;
-            border-radius: 19px;
+            padding: 16px 16px;
+            border-radius: 25px;
             box-shadow: 0 8px 32px var(--shadow-medium);
             z-index: 1000;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-primary);
             border: 1px solid var(--border-color);
-            max-width: 90vw;
-            width: max-content;
-            min-width: 400px;
+            width: 230px !important;  /* 固定宽度，加important确保不被覆盖 */
+            max-width: 230px !important;  /* 防止被拉宽 */
+            min-width: 230px !important;  /* 防止被压缩 */
             transition: opacity 0.3s ease;
+            text-align: center;  /* 居中对齐 */
         }}
         
         .legend-disclaimer.faded {{
@@ -676,24 +747,20 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         
         .legend-items-container {{
             display: flex;
-            justify-content: space-between;
+            justify-content: space-around;  /* 均匀分布 */
             align-items: center;
             margin-bottom: 10px;
-            gap: 16px;
         }}
         
         .legend-item {{
             display: flex;
             align-items: center;
-            margin: 0;
             white-space: nowrap;
-            flex: 1;
-            justify-content: center;
-            font-size: 12px;
+            font-size: 11px;
         }}
         
         .legend-color {{
-            width: 18px;
+            width: 16px;
             height: 3px;
             margin-right: 6px;
             border-radius: 2px;
@@ -704,13 +771,14 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             margin-top: 10px;
             padding-top: 10px;
             border-top: 1px solid var(--border-color);
+            text-align: center;  /* 居中对齐 */
         }}
         
         .disclaimer-section p {{
             margin: 3px 0;
             line-height: 1.3;
             color: var(--text-secondary);
-            font-size: 11px;
+            font-size: 10px;
         }}
         
         .disclaimer-section a {{
@@ -730,14 +798,13 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             background: var(--background-secondary);
             backdrop-filter: var(--backdrop-filter);
             -webkit-backdrop-filter: var(--backdrop-filter);
-            padding: 20px;
+            padding: 30px;
             border-radius: 37px;
             box-shadow: 0 8px 32px var(--shadow-medium);
             z-index: 1010;
             width: 360px;
             font-size: 16px;
             max-height: 55vh;
-            overflow-y: auto;
             display: none;
             color: var(--text-primary);
             border: 1px solid var(--border-color);
@@ -757,20 +824,65 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             opacity: 0;
         }}
         
+        /* 修改后的航线信息部分 - 固定不滚动 */
+        .route-info-header {{
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }}
+        
+        .route-info-header h4 {{
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: var(--text-primary);
+        }}
+        
+        .route-info-header p {{
+            margin: 5px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }}
+        
+        /* 航班列表容器 - 可滚动 */
+        .flights-container {{
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }}
+        
+        /* 自定义滚动条 */
+        .flights-container::-webkit-scrollbar {{
+            width: 6px;
+        }}
+        
+        .flights-container::-webkit-scrollbar-track {{
+            background: var(--border-color);
+            border-radius: 3px;
+        }}
+        
+        .flights-container::-webkit-scrollbar-thumb {{
+            background: var(--border-color-dark);
+            border-radius: 3px;
+        }}
+        
+        .flights-container::-webkit-scrollbar-thumb:hover {{
+            background: var(--primary-color);
+        }}
+        
         .flight-item {{
             border-bottom: 1px solid var(--border-color);
             padding: 12px 0;
             margin: 6px 0;
-            font-size: 14px;  /* 添加字号设置 */
-            line-height: 1.5;  /* 添加行高 */
+            font-size: 14px;
+            line-height: 1.5;
         }}
         
         .flight-item strong {{
-            font-size: 16px;  /* 航班号稍大 */
+            font-size: 16px;
         }}
 
         .flight-item small {{
-            font-size: 14px;  /* 详细信息稍小 */
+            font-size: 14px;
             color: var(--text-primary);
         }}
 
@@ -779,49 +891,38 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         }}
         
         .close-btn {{
-            position: absolute;  /* 恢复绝对定位 */
-            top: 20px;          /* 统一位置 */
-            right: 20px;        /* 统一位置 */
-            width: 40px;        /* 统一大小 */
-            height: 40px;       /* 统一大小 */
-            border-radius: 40px; /* 对应调整圆角 */
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 40px;
             background: var(--border-color);
             color: var(--text-secondary);
-            font-size: 20px;    /* 调整字号 */
-            line-height: 40px;  /* 让 X 居中 */
+            font-size: 20px;
+            line-height: 40px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            display: flex;       /* 添加 flex 布局 */
-            align-items: center; /* 垂直居中 */
-            justify-content: center; /* 水平居中 */
-            z-index: 10;        /* 确保在滚动内容之上 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
         }}
 
         .close-btn:hover {{
             background: var(--border-color-dark);
             color: var(--text-primary);
         }}
-              
-        /* 地图控件淡化效果 */
-        .leaflet-control-zoom,
-        .leaflet-control-layers {{
-            transition: opacity 0.3s ease;
-        }}
-        
-        .leaflet-control-zoom.faded,
-        .leaflet-control-layers.faded {{
-            opacity: 0.2;
-        }}
         
         .leaflet-control-attribution {{
             font-size: 8px !important;
             line-height: 1.2 !important;
-            opacity: 0.7 !important;  /* 半透明效果 */
-            background: rgba(255, 255, 255, 0.8) !important;  /* 半透明背景 */
+            opacity: 0.7 !important;
+            background: rgba(255, 255, 255, 0.8) !important;
         }}
         
-        /* 移动端适配优化 - 统一处理中小屏幕 */
+        /* 移动端适配 */
         @media (max-width: 768px) {{
             /* 控制面板适配 */
             .panel-backdrop {{
@@ -839,69 +940,31 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
                 height: 330px;
             }}
             
-            .control-panel-content {{
-                padding: 20px 20px;
-                gap: 10px;
-            }}
-            
-            .button-row {{
-                margin-bottom: 6px;
-            }}
-            
-            .filter-row {{
-                gap: 10px;
-            }}
-            
+          
             .checkbox-group {{
                 gap: 4px;
             }}
             
-            /* 移动端图例优化 - 确保居中和自适应 */
+            /* 图例保持固定宽度 - 如果屏幕太小则缩放 */
             .legend-disclaimer {{
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                right: auto;
-                transform: translateX(-50%);
-                padding: 8px 12px;
-                font-size: 10px;
-                max-width: 95vw;
-                width: auto;  /* 改为auto让内容决定宽度 */
-                min-width: 320px;  /* 增加最小宽度确保一行显示 */
-                text-align: center;
-            }}
-
-            .legend-items-container {{
-                display: flex;
-                gap: 8px;
-                margin-bottom: 6px;
-                flex-wrap: nowrap;
-                justify-content: center;
-                white-space: nowrap;
-            }}
-
-            .legend-item {{
-                font-size: 10px;
-                flex-shrink: 1;  /* 允许适当缩小 */
-                min-width: 0;  /* 允许缩小到内容宽度 */
-                white-space: nowrap;  /* 保持文字不换行 */
-            }}
-
-            .legend-color {{
-                width: 14px;
-                height: 2px;
-                margin-right: 4px;
+                width: 230px !important;
+                max-width: calc(100vw - 40px) !important;
+                min-width: unset !important;
             }}
             
-            .disclaimer-section {{
-                margin-top: 6px;
-                padding-top: 6px;
+            /* 自定义图层切换器移动端调整 */
+            .custom-layer-switcher {{
+                gap: 4px;
+                padding: 5px;
             }}
             
-            .disclaimer-section p {{
-                margin: 2px 0;
-                line-height: 1.2;
-                font-size: 9px;
+            .layer-btn {{
+                width: 40px;
+                height: 40px;
+            }}
+            
+            .layer-btn .layer-label {{
+                font-size: 10px;
             }}
             
             /* 信息面板移动端适配 */
@@ -911,13 +974,17 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
                 right: 20px;
                 width: calc(100vw - 40px);
                 max-height: 45vh;
-                padding: 20px;
+                padding: 30px;
             }}
             
-            /* 表单元素移动端优化 - 只调整必要属性 */
+            .flights-container {{
+                max-height: 200px;
+            }}
+            
+            /* 表单元素移动端优化 */
             select, input[type="text"] {{
-                font-size: 16px;  /* 防止 iOS 缩放，保持这个调整 */
-                min-height: 44px; /* 保持触摸友好的高度 */
+                font-size: 16px;
+                min-height: 44px;
                 padding: 12px 16px;
             }}
 
@@ -928,114 +995,40 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         
         /* 小屏幕特殊处理 */
         @media (max-width: 480px) {{
-            .checkbox-group {{
-                gap: 2px;
-            }}
-            
-            .control-panel-content {{
-                padding: 20px;
-                gap: 8px;
-            }}
-            
-            /* 小屏幕图例进一步优化 */
+            /* 真正小屏幕才允许缩小 */
             .legend-disclaimer {{
-                padding: 6px 8px;
-                font-size: 9px;
-                bottom: 20px;
-                left: 50%;
-                right: auto;
-                transform: translateX(-50%);
-                max-width: 95vw;
-                width: max-content;
-                min-width: 260px;
-            }}
-            
-            .legend-items-container {{
-                gap: 6px;
-                margin-bottom: 4px;
+                width: 230px !important;
+                font-size: 10px;
             }}
             
             .legend-item {{
-                font-size: 9px;
-            }}
-            
-            .legend-color {{
-                width: 12px;
-                height: 2px;
-                margin-right: 3px;
-            }}
-            
-            .disclaimer-section {{
-                margin-top: 4px;
-                padding-top: 4px;
+                font-size: 10px;
             }}
             
             .disclaimer-section p {{
-                font-size: 8px;
-                margin: 1px 0;
+                font-size: 9px;
             }}
-        }}
-        
-        /* 超小屏幕适配 */
-        @media (max-width: 360px) {{
-            .legend-items-container {{
-                flex-direction: column;  /* 垂直排列 */
+            
+            .custom-layer-switcher {{
                 gap: 4px;
+                padding: 5px;
             }}
             
-            .legend-item {{
-                justify-content: flex-start;  /* 左对齐 */
-                font-size: 9px;  /* 只保留图例的字号调整 */
+            .layer-btn {{
+                width: 40px;
+                height: 40px;
             }}
             
-            .disclaimer-section p {{
-                font-size: 7px;  /* 只保留免责声明的字号调整 */
+            .layer-btn .layer-label {{
+                font-size: 10px;
             }}
         }}
         
-        /* 大屏端保持原有优化 */
-        @media (min-width: 1024px) {{
+        /* 超小屏幕 */
+        @media (max-width: 360px) {{
             .legend-disclaimer {{
-                padding: 14px 18px;
-                font-size: 12px;
+                width: 230px !important;
             }}
-
-            .legend-items-container {{
-                gap: 20px;
-                margin-bottom: 20px;
-            }}
-
-            .legend-item {{
-                font-size: 12px;
-            }}
-
-            .legend-color {{
-                width: 18px;
-                height: 3px;
-                margin-right: 6px;
-            }}
-            
-            .disclaimer-section {{
-                margin-top: 10px;
-                padding-top: 10px;
-            }}
-            
-            .disclaimer-section p {{
-                margin: 3px 0;
-                font-size: 11px;
-            }}
-
-            #info-panel {{
-                padding: 20px;
-                font-size: 16px;
-                max-width: 390px;
-                max-height: 60vh;
-            }}
-            
-            .flight-item {{
-                padding: 12px 0;
-                margin: 8px 0;
-            }}           
         }}
         
         /* 航线hover效果 */
@@ -1203,32 +1196,51 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         </div>
     </div>
     
-    <!-- 优化后的图例和免责声明 -->
+    <!-- 自定义图层切换器 -->
+    <div class="custom-layer-switcher" id="custom-layer-switcher">
+        <div class="layer-btn" data-layer="gaode-big" title="高德大字">
+            <div class="layer-label">高德
+            大字</div>
+        </div>
+        <div class="layer-btn" data-layer="gaode-standard" title="高德标准">
+            <div class="layer-label">高德
+            标准</div>
+        </div>
+        <div class="layer-btn" data-layer="gaode-satellite" title="高德卫星">
+            <div class="layer-label">高德
+            卫星</div>
+        </div>
+        <div class="layer-btn" data-layer="osm" title="OpenStreetMap">
+            <div class="layer-label">OSM</div>
+        </div>
+    </div>
+    
+    <!-- 固定尺寸的图例和免责声明 -->
     <div class="legend-disclaimer" id="legend-disclaimer">
         <div class="legend-items-container">
             <div class="legend-item">
                 <div class="legend-color" style="background-color: #FF8C61;"></div>
-                早班航线
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background-color: #4E598C;"></div>
-                晚班航线
+                早班
             </div>
             <div class="legend-item">
                 <div class="legend-color" style="background-color: #CE6A85;"></div>
-                早晚航线
+                早晚班
             </div>
             <div class="legend-item">
-                <div style="margin-right: 10px;">✈</div>
-                航线方向
+                <div class="legend-color" style="background-color: #4E598C;"></div>
+                晚班
             </div>
         </div>
         
         <div class="disclaimer-section">
-            <p><strong>免责声明：</strong>本 html 为本地文件，航线不会更新；机场坐标整理自公开数据，可能存在错误。</p>
-            <p>航班数据源于 海航官方，没有到达时刻和机型信息，仅供参考，建议配合
-                <a href="https://www.kdocs.cn/l/cqy1AfiQ4Gcx" target="_blank">v0910文档</a> 食用。
-            </p>
+            <p><strong>免责声明：</strong>
+            <!-- <a href="https://www.kdocs.cn/l/cqy1AfiQ4Gcx" target="_blank">v0930夏秋航班</a> -->
+            <a href="https://www.kdocs.cn/l/cqeWjFOoTyN7" target="_blank">v0930冬春航班</a>
+            源于<strong>海航官方</strong>。</p>
+            <p>到达时刻和机型信息为适配界面自行补充。</p>
+            <p>机场名和坐标整理自公开数据，仅供参考。</p>
+            <p>项目已开源至 <strong><a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank">Github.</a></strong>
+             有需求可联系作者。</p>
         </div>
     </div>
     
@@ -1251,45 +1263,65 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         // 机场数据
         const airports = {json.dumps(list(airports), ensure_ascii=False, indent=2)};
         
-        // 初始化地图
-        const map = L.map('map').setView([{center_lat}, {center_lng}], 5);
+        // 初始化地图（不添加缩放控件）
+        const map = L.map('map', {{
+            zoomControl: false  // 禁用缩放控件
+        }}).setView([{center_lat}, {center_lng}], 5);
         
         // 定义多个地图底图选项
         const baseMaps = {{
             // 高德大字
-            "高德大字": L.tileLayer('https://webst0{{s}}.is.autonavi.com/appmaptile?style=7&x={{x}}&y={{y}}&z={{z}}',{{
+            "gaode-big": L.tileLayer('https://webst0{{s}}.is.autonavi.com/appmaptile?style=7&x={{x}}&y={{y}}&z={{z}}',{{
                 subdomains: ['1','2','3','4'],
                 attribution: '© 高德地图'
             }}),
 
             // 高德标准
-            "高德标准": L.tileLayer('https://webrd0{{s}}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={{x}}&y={{y}}&z={{z}}', {{
+            "gaode-standard": L.tileLayer('https://webrd0{{s}}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={{x}}&y={{y}}&z={{z}}', {{
                 subdomains: ['1', '2', '3', '4'],
                 attribution: '© 高德地图'
             }}),
         
             // 高德卫星图
-            "高德卫星": L.tileLayer('https://webst0{{s}}.is.autonavi.com/appmaptile?style=6&x={{x}}&y={{y}}&z={{z}}', {{
+            "gaode-satellite": L.tileLayer('https://webst0{{s}}.is.autonavi.com/appmaptile?style=6&x={{x}}&y={{y}}&z={{z}}', {{
                 subdomains: ['1', '2', '3', '4'],
                 attribution: '© 高德地图'
             }}),
            
             // OpenStreetMap
-            "OpenStreetMap": L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+            "osm": L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
                 attribution: '© OpenStreetMap contributors'
-            }}),
+            }})
         }};
         
-        // 默认使用高德地图
-        baseMaps["高德大字"].addTo(map);
+        // 当前活动图层
+        let currentBaseLayer = baseMaps["gaode-big"];
+        currentBaseLayer.addTo(map);
         
-        // 添加图层控制器 - 移到右侧
-        const layerControl = L.control.layers(baseMaps);
-        layerControl.setPosition('topright');
-        layerControl.addTo(map);
-        
-        // 确保缩放控件也在右侧
-        map.zoomControl.setPosition('topright');
+        // 初始化自定义图层切换器
+        function initLayerSwitcher() {{
+            const layerButtons = document.querySelectorAll('.layer-btn');
+            
+            // 设置默认活动状态
+            document.querySelector('.layer-btn[data-layer="gaode-big"]').classList.add('active');
+            
+            layerButtons.forEach(btn => {{
+                const layerKey = btn.dataset.layer;
+                
+                btn.addEventListener('click', function() {{
+                    // 移除当前图层
+                    map.removeLayer(currentBaseLayer);
+                    
+                    // 添加新图层
+                    currentBaseLayer = baseMaps[layerKey];
+                    currentBaseLayer.addTo(map);
+                    
+                    // 更新按钮状态
+                    layerButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                }});
+            }});
+        }}
         
         // 存储图层和状态
         let routeLayers = [];
@@ -1301,17 +1333,14 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         // 淡化背景元素
         function fadeBackgroundElements(shouldFade) {{
             const legendDisclaimer = document.getElementById('legend-disclaimer');
-            const zoomControl = document.querySelector('.leaflet-control-zoom');
-            const layerControl = document.querySelector('.leaflet-control-layers');
+            const customLayerSwitcher = document.getElementById('custom-layer-switcher');
             
             if (shouldFade) {{
                 legendDisclaimer.classList.add('faded');
-                if (zoomControl) zoomControl.classList.add('faded');
-                if (layerControl) layerControl.classList.add('faded');
+                if (customLayerSwitcher) customLayerSwitcher.classList.add('faded');
             }} else {{
                 legendDisclaimer.classList.remove('faded');
-                if (zoomControl) zoomControl.classList.remove('faded');
-                if (layerControl) layerControl.classList.remove('faded');
+                if (customLayerSwitcher) customLayerSwitcher.classList.remove('faded');
             }}
         }}
         
@@ -1378,7 +1407,7 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
             fadeBackgroundElements(panelVisible);
         }}
         
-        // 显示信息面板
+        // 显示信息面板 - 修改后的版本，限制机型显示数量
         function showInfoPanel(route, matchingFlights) {{
             fadeBackgroundElements(true);
             
@@ -1399,12 +1428,23 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
                 `;
             }});
             
+            // 处理机型显示：只显示前三个机型加省略号
+            const uniqueAircrafts = [...new Set(route.individual_aircraft)].sort();
+            let aircraftDisplay;
+            if (uniqueAircrafts.length > 4) {{
+                aircraftDisplay = uniqueAircrafts.slice(0, 4).join(', ') + '......';
+            }} else {{
+                aircraftDisplay = uniqueAircrafts.join(', ');
+            }}
+            
             const info = `
-                <h4>${{route.departure}} → ${{route.arrival}}</h4>
-                <p><strong>航线类型：</strong>${{route.route_type}} | <strong>航班数：</strong>${{matchingFlights.length}}</p>
-                <p><strong>航空公司：</strong>${{route.airlines.join(', ')}}</p>
-                <p><strong>机型：</strong>${{[...new Set(route.individual_aircraft)].sort().join(', ')}}(仅供参考)</p>
-                <div style="max-height: 200px; overflow-y: auto;">
+                <div class="route-info-header">
+                    <h4>${{route.departure}} → ${{route.arrival}}</h4>
+                    <p><strong>航线类型：</strong>${{route.route_type}} | <strong>航班数：</strong>${{matchingFlights.length}}</p>
+                    <p><strong>航空公司：</strong>${{route.airlines.join(', ')}}</p>
+                    <p><strong>机型：</strong>${{aircraftDisplay}}(仅供参考)</p>
+                </div>
+                <div class="flights-container">
                     ${{flightInfo}}
                 </div>
             `;
@@ -1419,7 +1459,7 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         }}
         
         // 计算弧形路径点
-        function calculateArcPoints(start, end, curvature = 0.3) {{
+        function calculateArcPoints(start, end, curvature = 0.2) {{
             const startLat = start[0] * Math.PI / 180;
             const startLng = start[1] * Math.PI / 180;
             const endLat = end[0] * Math.PI / 180;
@@ -1781,6 +1821,7 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         console.log('航班数据样例:', flights.slice(0, 2));
         console.log('航线数据样例:', routes.slice(0, 2));
         initializeControls();
+        initLayerSwitcher();  // 初始化自定义图层切换器
         updateDisplay();
         console.log('初始化完成');
     </script>
@@ -1789,21 +1830,20 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
     """
     
     # 保存HTML文件
-    output_file = f'HNA{version_prefix}_flight_map_v0910h.html'
+    output_file = f'HNA{version_prefix}_v0930h_winter.html'
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
 
 # 主程序
 if __name__ == "__main__":
     # 统一的Excel文件路径
-    excel_file = "20250912/v0910.xlsx"  # 使用新生成的文件
+    excel_file = "data_process/v0930冬春.xlsx"  # 使用新生成的文件
     
     # 处理666版本（夜间航班）- 读取666工作表
     create_flight_visualization(excel_file, sheet_name="666", version_prefix="666")
-    print(f"已生成: HNA666_flight_map_v0910h.html")
+    print(f"已生成666html")
     
     # 处理2666版本（全部航班）- 读取2666工作表
     create_flight_visualization(excel_file, sheet_name="2666", version_prefix="2666")
-    print(f"已生成: HNA2666_flight_map_v0910h.html")
 
-    
+    print(f"已生成2666html")
