@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/666",
+      "destination": "/HNA666_v1015h_winter.html"
+    },
+    {
+      "source": "/2666",
+      "destination": "/HNA2666_v1015h_winter.html"
+    }
+  ]
+}

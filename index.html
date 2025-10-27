@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="HNA 航线图" />
+    <title>海航666随心飞 · 航线图</title>
+    <style>
+      :root {
+        --bg: #0b0c0f;
+        --fg: #e6e7eb;
+        --muted: #a2a6b0;
+        --card: #12141a;
+        --border: #232530;
+        --primary: #d82032;
+        --primary-weak: rgba(216, 32, 50, 0.12);
+        --accent: var(--primary);
+        --shadow: 0 10px 30px rgba(0,0,0,.35);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f8fb;
+          --fg: #0b0c0f;
+          --muted: #5b6170;
+          --card: #ffffff;
+          --border: #e7e9f0;
+          --primary: #d82032;
+          --primary-weak: rgba(216, 32, 50, 0.10);
+          --accent: var(--primary);
+          --shadow: 0 10px 30px rgba(16,24,40,.08);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+        background: radial-gradient(1200px 600px at 20% -10%, var(--primary-weak), transparent 60%),
+                    radial-gradient(800px 400px at 100% 0%, rgba(34,197,94,.10), transparent 55%),
+                    var(--bg);
+        color: var(--fg);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 56px 20px 48px;
+      }
+      header.hero {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 28px;
+        align-items: center;
+      }
+      .logo {
+        display: inline-grid;
+        place-items: center;
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 800;
+        letter-spacing: .5px;
+        box-shadow: var(--shadow);
+        user-select: none;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.15;
+        margin: 10px 0 6px;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 15%, transparent);
+      }
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+      .feat {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0,1fr));
+        gap: 16px;
+        padding: 0;
+        margin: 0;
+      }
+      .feat li {
+        list-style: none;
+        padding: 0;
+        font-size: 13px;
+        color: var(--muted);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+        text-align: left;
+        line-height: 1.5;
+      }
+      .feat .icon {
+        display: inline-grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--primary-weak);
+        color: var(--primary);
+        border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent);
+      }
+      .feat .icon svg {
+        width: 20px;
+        height: 20px;
+      }
+      .feat b { color: var(--fg); font-weight: 600; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0,1fr));
+        gap: 16px;
+        margin-top: 10px;
+      }
+      @media (max-width: 720px) {
+        .feat { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        .grid { grid-template-columns: 1fr; }
+      }
+      .card {
+        display: block;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background:
+          radial-gradient(600px 200px at 50% 0%, var(--primary-weak), transparent 70%),
+          linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+        color: var(--fg);
+        text-decoration: none;
+        transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+        will-change: transform;
+        position: relative;
+        overflow: hidden;
+      }
+      .card:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+        box-shadow: 0 12px 24px rgba(216, 32, 50, .15);
+      }
+      .card h3 {
+        margin: 2px 0 6px;
+        font-size: 18px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        background: var(--primary);
+        border: 0;
+      }
+      .btn .arrow {
+        display: inline-block;
+        transform: translateX(0);
+        transition: transform .18s ease;
+      }
+      .card:hover .btn .arrow { transform: translateX(3px); }
+      footer {
+        margin-top: 20px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+      .kbd {
+        border: 1px solid var(--border);
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: var(--card);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="hero">
+        <div class="logo" aria-hidden="true">HNA</div>
+        <h1>海航666随心飞 · 航线图</h1>
+        <p class="sub">航班信息来自 <a href="https://docs.qq.com/sheet/DY2Zsd2FEZVNKZE1T?tab=BB08J2" target="_blank" rel="noopener noreferrer">@安排生活</a> 、 <a href="https://www.kdocs.cn/l/cqeWjFOoTyN7" target="_blank" rel="noopener noreferrer">@Blackxool</a> </p>
+        <span class="badge">
+          <span class="dot"></span>
+          更新时间2025.10.15
+        </span>
+      </header>
+
+      <section class="panel" aria-labelledby="features">
+        <ul id="features" class="feat" role="list">
+          <li>
+            <span class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A11.953 11.953 0 0 1 12 13.5c-2.998 0-5.74-1.1-7.843-2.918" /></svg>
+            </span>
+            <div><b>航线可视化</b><br>交互式地图清晰呈现</div>
+          </li>
+          <li>
+            <span class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+            </span>
+            <div><b>航班信息</b><br>快速查询航班详情</div>
+          </li>
+          <li>
+            <span class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
+            </span>
+            <div><b>多维筛选</b><br>探索航线网络新玩法</div>
+          </li>
+          <li>
+            <span class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" /></svg>
+            </span>
+            <div><b>高清地图</b><br>纤毫毕现的视觉体验</div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="grid" aria-labelledby="entries">
+        <a class="card" href="/666">
+          <h3>666 版本（冬季航线）</h3>
+          <p>总航线 1570 条，时间段 20:00 至 08:00 。春运、五一、暑运、十一 不可用</p>
+          <span class="btn">立即进入 <span class="arrow">→</span></span>
+        </a>
+
+        <a class="card" href="/2666">
+          <h3>2666 版本（冬季航线）</h3>
+          <p>总航线 2220 条，时间段 19:00 至 09:00 。春运、暑运 不可用</p>
+          <span class="btn">立即进入 <span class="arrow">→</span></span>
+        </a>
+      </section>
+
+      <footer>
+        <p>© 2025 HNA 航线图 · 精准规划，轻松出行</p>
+        <p>Based on <a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank" rel="noopener noreferrer">@Blackxool</a> / <a href="https://github.com/Dr-T/HNA666-flight-map" target="_blank" rel="noopener noreferrer">@xandertang</a></p>
+      </footer>
+    </main>
+  </body>
+</html>
