@@ -91,7 +91,7 @@ def process_flight_data():
     
     # 航司信息字典
     airline_info = {
-        'JD': {'name': '首都航空', 'aircraft': 'A319/A320/A321/A332/A333'},
+        'JD': {'name': '首都航空', 'aircraft': 'A319/A320/A20N/A321/A21N/A332/A333'},
         'HU': {'name': '海南航空', 'aircraft': 'A20N/A21N/A332/A333/B738/B38M/B788/B789'},
         'GS': {'name': '天津航空', 'aircraft': 'A320/A20N/A321/A332/E190/E195'},
         'PN': {'name': '西部航空', 'aircraft': 'A319/A19N/A320/A20N/A321/A21N'},
@@ -99,7 +99,7 @@ def process_flight_data():
         'CN': {'name': '大新华航空', 'aircraft': 'B738'},
         'UQ': {'name': '乌鲁木齐航空', 'aircraft': 'B738'},
         'GX': {'name': '北部湾航空', 'aircraft': 'A320/A20N/E190'},
-        '8L': {'name': '祥鹏航空', 'aircraft': 'A320/A20N/A333/B737/B738/B38M'},
+        '8L': {'name': '祥鹏航空', 'aircraft': 'A320/A20N/A21N/A333/B737/B738/B38M'},
         'FU': {'name': '福州航空', 'aircraft': 'B738/B38M'},
         'Y8': {'name': '金鹏航空', 'aircraft': 'B738'}
     }
@@ -107,36 +107,45 @@ def process_flight_data():
     # 1. 读取数据文件
     print("读取数据文件...")
     df_flight = None
-    
-    # 先尝试读取md文件
-    if Path("v0910.md").exists():
-        df_flight = read_md_to_excel("v0910.md")
-        print("成功读取md文件")
-    
-    # 如果md文件不存在或读取失败，读取Excel文件
-    if df_flight is None:
-        try:
-            df_flight = pd.read_excel('v0910origin.xlsx')
-            print("成功读取Excel文件")
-        except:
-            print("无法读取数据文件")
-            return
-    
+
+    input_file = Path("v1029.md")   # 输入文件名
+
+    if input_file.exists():
+        df_flight = read_md_to_excel(input_file)
+        print(f"成功读取文件: {input_file.name}")
+    else:
+        print(f"未找到文件: {input_file.name}")
+        return
+
     print(f"原始数据: {len(df_flight)} 行")
-    
+  
     # 2. 读取机场信息文件
     airport_mapping = {}
+    import chardet
+
+    # 检测文件编码
+    def detect_encoding(file_path):
+        with open(file_path, 'rb') as f:
+            raw_data = f.read()
+            result = chardet.detect(raw_data)
+            return result['encoding']
+
     try:
-        df_airport = pd.read_csv('cityairport_CNname_IATA_ICAO_coords.csv', encoding='gbk')
+        # 自动检测编码
+        file_encoding = detect_encoding('CN266_cityairport_name_IATA_ICAO_coords.csv')
+        print(f"检测到的编码: {file_encoding}")
+        
+        df_airport = pd.read_csv('CN266_cityairport_name_IATA_ICAO_coords.csv', encoding=file_encoding)
         airport_mapping = dict(zip(df_airport['全名'], df_airport['简名(城市/机场名)']))
         print(f"机场信息: {len(airport_mapping)} 个机场")
-    except:
-        print("机场信息文件读取失败，将使用原始城市名")
+        
+    except Exception as e:
+        print(f"读取失败: {e}")
     
     # 3. 删除适用产品列
-    if '适用产品' in df_flight.columns:
-        df_flight = df_flight.drop('适用产品', axis=1)
-        print("已删除'适用产品'列")
+    if '产品' in df_flight.columns:
+        df_flight = df_flight.drop('产品', axis=1)
+        print("已删除'产品'列")
     
     # 4. 处理航司信息
     print("处理航司信息...")
@@ -152,16 +161,45 @@ def process_flight_data():
     df_flight.insert(0, '航司名', airline_names)
     
     # 5. 标准化机场名
-    if airport_mapping:
-        print("标准化机场名...")
-        def find_airport_name(city_name):
-            for full_name, short_name in airport_mapping.items():
-                if str(city_name) in str(full_name) or str(full_name) in str(city_name):
-                    return short_name
-            return city_name
-        
-        df_flight['出港城市'] = df_flight['出港城市'].apply(find_airport_name)
-        df_flight['到港城市'] = df_flight['到港城市'].apply(find_airport_name)
+    print("标准化机场名...")
+
+    def find_airport_name(city_name):
+        """标准化机场名"""
+        city_str = str(city_name).strip()
+
+        # 自定义优先映射表（精确匹配优先）
+        custom_mapping = {
+            '遵义茅台': '遵义/茅台',
+            '遵义新舟': '遵义/新舟',
+            '遵义': '遵义/新舟',
+            '重庆万州': '万州/五桥',
+            '重庆江北': '重庆/江北',
+            '重庆': '重庆/江北',
+            '呼伦贝尔': '呼伦贝尔/海拉尔',
+            '赣州': '赣州/黄金',
+            # ...可继续扩展
+        }
+
+        # 1. 精确匹配
+        if city_str in custom_mapping:
+            return custom_mapping[city_str]
+
+        # 2. 包含匹配（只在没命中时）
+        for original, standard in custom_mapping.items():
+            if original in city_str:
+                return standard
+
+        # 3. 机场映射表匹配
+        for full_name, short_name in airport_mapping.items():
+            if city_str in str(full_name) or str(full_name) in city_str:
+                return short_name
+
+        # 4. 默认返回原名
+        return city_str
+
+    # 注意：此处的函数定义应与 airport_mapping 同级缩进，不在 if 内
+    df_flight['出港城市'] = df_flight['出港城市'].apply(find_airport_name)
+    df_flight['到港城市'] = df_flight['到港城市'].apply(find_airport_name)
     
     # 6. 添加到达时刻列
     departure_col_index = df_flight.columns.get_loc('出发时刻')
@@ -177,31 +215,19 @@ def process_flight_data():
     
     # 9. 保存到一个Excel文件的两个sheet中
     print("保存数据文件...")
-    output_file = 'v0910.xlsx'
-    
+    output_file = input_file.with_suffix('.xlsx')   # 自动改扩展名
+
     with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-        # 保存完整数据到2666 sheet
         df_flight.to_excel(writer, sheet_name='2666', index=False)
-        print(f"完整数据已保存到sheet '2666': {len(df_flight)} 行")
-        
-        # 保存夜间航班数据到666 sheet
         df_night_flight.to_excel(writer, sheet_name='666', index=False)
-        print(f"夜间航班数据已保存到sheet '666': {len(df_night_flight)} 行")
-    
+
     print(f"\n处理完成！文件已保存为: {output_file}")
     print(f"原始数据: {len(df_flight)} 行, {len(df_flight.columns)} 列")
     print(f"夜间航班: {len(df_night_flight)} 行")
-    print(f"剔除的白天航班: {len(df_flight) - len(df_night_flight)} 行")
-    print("列名:", list(df_flight.columns))
-    print("\n完整数据前3行:")
-    print(df_flight.head(3).to_string())
-    print("\n夜间航班前3行:")
-    print(df_night_flight.head(3).to_string())
-    
+       
     return df_flight, df_night_flight
 
 # 主程序
 if __name__ == "__main__":
     print("航线数据处理程序")
-    print("=" * 30)
     process_flight_data()
