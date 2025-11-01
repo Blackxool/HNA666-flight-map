@@ -9,9 +9,14 @@ import os
 
 def load_airport_coordinates():
     """加载机场坐标数据库"""
-    coord_file = 'data_process/cityairport_CNname_IATA_ICAO_coords.xlsx'
+    coord_file = 'CN266_cityairport_name_IATA_ICAO_coords.csv'
     try:
-        coord_df = pd.read_excel(coord_file)
+        # 读取CSV文件，可能需要指定编码
+        coord_df = pd.read_csv(coord_file, encoding='utf-8')  # 可以尝试 'gbk', 'gb18030' 等编码
+        
+        # 如果CSV文件没有表头，需要添加header=None
+        # coord_df = pd.read_csv(coord_file, encoding='utf-8', header=None)
+        
         coord_df.columns = ['city_airport', 'full_name', 'iata', 'icao', 'coordinates']
         
         coord_dict = {}
@@ -23,11 +28,12 @@ def load_airport_coordinates():
                 coord_dict[city_airport] = (lat, lng)
             except:
                 continue
+        print(f"成功加载 {len(coord_dict)} 个机场坐标")
         return coord_dict
     except Exception as e:
         print(f"读取坐标数据库失败: {e}")
         return {}
-
+    
 def parse_time(time_str):
     """解析时间格式，处理跨日航班"""
     if pd.isna(time_str):
@@ -1234,8 +1240,7 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
         
         <div class="disclaimer-section">
             <p><strong>免责声明：</strong>
-            <!-- <a href="https://www.kdocs.cn/l/cqy1AfiQ4Gcx" target="_blank">v0930夏秋航班</a> -->
-            <a href="https://www.kdocs.cn/l/cqeWjFOoTyN7" target="_blank">v0930冬春航班</a>
+            <a href="https://www.kdocs.cn/l/cqeWjFOoTyN7" target="_blank">v1022冬春航班</a>
             源于<strong>海航官方</strong>。</p>
             <p>到达时刻和机型信息为适配界面自行补充。</p>
             <p>机场名和坐标整理自公开数据，仅供参考。</p>
@@ -1830,14 +1835,14 @@ def create_flight_visualization(excel_file, sheet_name=None, version_prefix="666
     """
     
     # 保存HTML文件
-    output_file = f'HNA{version_prefix}_v0930h_winter.html'
+    output_file = f'HNA{version_prefix}_v1022_winter.html'
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
 
 # 主程序
 if __name__ == "__main__":
     # 统一的Excel文件路径
-    excel_file = "data_process/v0930冬春.xlsx"  # 使用新生成的文件
+    excel_file = "20250912/v1022.xlsx"  # 使用新生成的文件
     
     # 处理666版本（夜间航班）- 读取666工作表
     create_flight_visualization(excel_file, sheet_name="666", version_prefix="666")
@@ -1845,5 +1850,4 @@ if __name__ == "__main__":
     
     # 处理2666版本（全部航班）- 读取2666工作表
     create_flight_visualization(excel_file, sheet_name="2666", version_prefix="2666")
-
     print(f"已生成2666html")
