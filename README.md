@@ -7,7 +7,7 @@
 
 ## 🏎️ 更新详情
 
-2026.03.13 update: 与[飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)合作买了个域名[hna666.cfd](hna666.cfd)，可以直接访问（新增inxde.html ）。
+2026.03.14 update: 与[飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)合作买了个域名[hna666.cfd](hna666.cfd)，可以直接访问（新增inxde.html ）。
 依托cloudflare服务，加载依据网速情况，并不是很理想，所以本仓库依然提供静态版 html 可供下载。（`v0822f`中`0822`为航班数据截断日期，`f`为版本名）。
 
 ### **数据更新**
