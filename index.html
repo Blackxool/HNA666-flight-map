@@ -3,37 +3,40 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>海航666随心飞-航班/航线可视化工具</title>
+    <title>海航666-航班/航线可视化工具</title>
     <style>
         :root {
-            /* 指定彩色元素 */
+            /* 彩色光球 */
             --color-pink: #CE6A85;
             --color-orange: #FF8C61;
             --color-blue: #4E598C;
 
-            /* 亮色模式基础变量 */
-            --bg-color: #F5F5F7;
-            --glass-bg: rgba(255, 255, 255, 0.45);
-            --glass-border: rgba(255, 255, 255, 0.6);
-            --glass-shadow: rgba(0, 0, 0, 0.08);
+            /* 免责声明与主色调 */
+            --primary-color: #8E6289;
+            
+            /* 亮色模式 */
+            --bg-color: #f5ebe0;
             --text-primary: #1D1D1F;
             --text-secondary: #86868B;
-            --btn-bg: rgba(255, 255, 255, 0.7);
-            --btn-hover: rgba(255, 255, 255, 0.9);
-            --backdrop-blur: blur(25px);
+            /* 背景文字颜色 */
+            --huge-text: rgba(0, 0, 0, 0.1); 
+            /* 强化水波纹底色浓度，让平时更明显 */
+            --water-base: rgba(255, 246, 237, 0.35); 
+            --history-bg: rgba(255, 246, 237, 0.15);
+            --border-color: rgba(141, 125, 129, 0.24);
         }
 
-        /* 跟随系统暗黑模式适配 */
+        /* 跟随系统暗黑模式 */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-color: #050505;
-                --glass-bg: rgba(25, 25, 25, 0.35);
-                --glass-border: rgba(255, 255, 255, 0.12);
-                --glass-shadow: rgba(0, 0, 0, 0.5);
+                --bg-color: #000000;
                 --text-primary: #F5F5F7;
                 --text-secondary: #A1A1A6;
-                --btn-bg: rgba(60, 60, 65, 0.4);
-                --btn-hover: rgba(80, 80, 85, 0.6);
+                --huge-text: rgba(255, 255, 255, 0.1); 
+                /* 暗黑下也适度强化水波底色 */
+                --water-base: rgba(255, 255, 255, 0.08); 
+                --history-bg: rgba(40, 40, 40, 0.15);
+                --border-color: rgba(255, 255, 255, 0.15);
             }
         }
 
@@ -45,25 +48,20 @@
         body {
             margin: 0;
             padding: 0;
+            width: 100vw;
             height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+            overflow: hidden; 
             position: relative;
         }
 
-        /* 酷炫动态背景 */
+        /* ========== 1. 光球底层 ========== */
         .bg-canvas {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
             z-index: 0;
-            overflow: hidden;
             pointer-events: none;
         }
 
@@ -71,239 +69,288 @@
             position: absolute;
             border-radius: 50%;
             filter: blur(90px);
-            opacity: 0.65;
+            opacity: 0.7;
             animation: float 20s infinite alternate ease-in-out;
-            will-change: transform;
         }
 
         @media (prefers-color-scheme: dark) {
-            .orb {
-                opacity: 0.4; /* 暗黑模式下降低发光强度以保护视觉 */
-            }
+            .orb { opacity: 0.5; filter: blur(100px); }
         }
 
-        .orb-1 {
-            width: 45vw;
-            height: 45vw;
-            min-width: 300px;
-            min-height: 300px;
-            background: var(--color-pink);
-            top: -10%;
-            left: -10%;
-            animation-delay: 0s;
-        }
+        .orb-1 { width: 50vw; height: 50vw; min-width: 400px; background: var(--color-pink); top: -15%; left: -10%; }
+        .orb-2 { width: 45vw; height: 45vw; min-width: 350px; background: var(--color-orange); bottom: -15%; right: -10%; animation-delay: -5s; animation-duration: 24s; }
+        .orb-3 { width: 40vw; height: 40vw; min-width: 300px; background: var(--color-blue); top: 35%; left: 30%; animation-delay: -9s; animation-duration: 28s; }
 
-        .orb-2 {
-            width: 40vw;
-            height: 40vw;
-            min-width: 250px;
-            min-height: 250px;
-            background: var(--color-orange);
-            bottom: -5%;
-            right: -10%;
-            animation-delay: -5s;
-            animation-duration: 25s;
-        }
-
-        .orb-3 {
-            width: 35vw;
-            height: 35vw;
-            min-width: 200px;
-            min-height: 200px;
-            background: var(--color-blue);
-            top: 40%;
-            left: 35%;
-            transform: translate(-50%, -50%);
-            animation-delay: -10s;
-            animation-duration: 30s;
-        }
-
-        /* 修改了缩放逻辑，达到上下浮动10%的效果 (0.9 到 1.1) */
         @keyframes float {
             0% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(6vw, -5vh) scale(1.1); }
-            66% { transform: translate(-3vw, 6vh) scale(0.9); }
+            33% { transform: translate(6vw, -6vh) scale(1.1); }
+            66% { transform: translate(-4vw, 5vh) scale(0.9); }
             100% { transform: translate(0, 0) scale(1); }
         }
 
-        /* 主容器：大圆角毛玻璃 */
-        .glass-panel {
-            position: relative;
+        /* ========== 2. 背景文字层 ========== */
+        .bg-text {
+            position: absolute;
+            top: 50%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 110vw; 
+            font-size: max(14vw, 180px); 
+            font-weight: 900;
+            line-height: 1.1; 
+            color: var(--huge-text);
+            word-break: break-all; 
+            text-align: justify;
             z-index: 1;
-            width: 90%;
-            max-width: 400px;
-            background: var(--glass-bg);
-            backdrop-filter: var(--backdrop-blur);
-            -webkit-backdrop-filter: var(--backdrop-blur);
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 16px 40px var(--glass-shadow);
-            border-radius: 37px;
-            padding: 45px 30px;
+            pointer-events: none;
+            user-select: none;
+            mix-blend-mode: overlay; 
+        }
+
+        /* ========== 3. 全新 UI 弹性布局层（自动计算空白区域居中） ========== */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
             display: flex;
             flex-direction: column;
+            justify-content: space-between; /* 将顶部、中部、底部元素自动上下推开 */
             align-items: center;
-            gap: 30px;
+            z-index: 10;
+            pointer-events: none; 
+            /* 设置安全的上下边距 */
+            padding: 4vh 0 3vh 0; 
         }
 
-        /* 头部标题 */
-        .header {
-            text-align: center;
+        /* --- 顶部栏 --- */
+        .top-bar {
+            position: relative;
+            pointer-events: auto;
         }
 
-        .header h1 {
-            margin: 0;
-            font-size: 22px;
-            color: var(--text-primary);
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            line-height: 1.3;
-        }
-
-        .header p {
-            margin: 8px 0 0 0;
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        /* 导航按钮组 */
-        .nav-group {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            width: 100%;
-        }
-
-        .nav-btn {
-            display: flex;
+        .history-btn {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 100%;
-            height: 60px;
-            border-radius: 30px; /* 圆角直径等于高度 (半径是高度的一半) */
-            background: var(--btn-bg);
-            border: 1px solid var(--glass-border);
+            padding: 12px 32px;
+            background: var(--history-bg); 
+            backdrop-filter: blur(25px);   
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255,255,255,0.3); 
+            border-radius: 30px;
             color: var(--text-primary);
             text-decoration: none;
-            font-size: 17px;
+            font-size: 14px;
             font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
         }
 
-        /* 扫光悬停效果 */
-        .nav-btn::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transform: translateX(-100%);
-            transition: 0.5s;
+        .history-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.4);
         }
-
-        .nav-btn:hover {
-            transform: translateY(-3px) scale(1.02);
-            background: var(--btn-hover);
-            box-shadow: 0 10px 25px var(--glass-shadow);
-            border-color: rgba(255, 255, 255, 0.8);
-        }
-
         @media (prefers-color-scheme: dark) {
-            .nav-btn:hover {
-                border-color: rgba(255, 255, 255, 0.3);
-            }
+            .history-btn:hover { background: rgba(80, 80, 80, 0.4); }
         }
 
-        .nav-btn:active {
-            transform: translateY(1px) scale(0.98);
+        /* --- 中心交互区域 (由于设置了 flex: 1，它会自动在除去头尾后的空间内绝对居中) --- */
+        .main-area {
+            position: relative;
+            flex: 1; /* 撑满剩下的所有空间 */
+            display: flex;
+            flex-direction: row; 
+            align-items: center;
+            justify-content: center;
+            gap: 12vw; 
+            width: 100vw;
+            pointer-events: none; 
         }
 
-        .nav-btn:hover::before {
-            transform: translateX(100%);
-        }
-
-        /* 注入彩色光晕边框质感 */
-        .btn-666 {
-            box-shadow: 0 4px 15px rgba(206, 106, 133, 0.12); /* 粉色阴影 */
-        }
-        .btn-2666 {
-            box-shadow: 0 4px 15px rgba(78, 89, 140, 0.12); /* 蓝色阴影 */
-        }
-
-        /* 免责声明 */
-        .disclaimer-section {
-            margin-top: 5px;
-            padding-top: 20px;
-            border-top: 1px solid var(--glass-border);
-            text-align: center;
-            width: 100%;
-        }
-
-        .disclaimer-section p {
-            margin: 6px 0;
-            line-height: 1.4;
-            color: var(--text-secondary);
-            font-size: 12px;
-        }
-
-        .disclaimer-section a {
-            color: var(--color-pink);
+        .huge-btn {
+            pointer-events: auto; 
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: clamp(280px, 32vw, 480px); 
+            aspect-ratio: 1 / 1; 
             text-decoration: none;
-            font-weight: 600;
-            transition: color 0.2s;
+            color: var(--text-primary);
         }
 
+        .btn-content {
+            position: relative;
+            z-index: 10; 
+            text-align: center;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .btn-title {
+            display: block;
+            font-size: min(8vw, 240px);
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+
+        .btn-subtitle {
+            display: block;
+            font-size: 18px; 
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 10px;
+            margin-top: 5px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .huge-btn:hover .btn-content { transform: scale(1.08); }
+
+        /* --- 幽灵水波纹 --- */
+        .ripple {
+            position: absolute;
+            top: -15%; left: -15%;
+            width: 130%; height: 130%;
+            border-radius: 50%;
+            background: var(--water-base);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            -webkit-mask-image: radial-gradient(circle, black 30%, transparent 65%);
+            mask-image: radial-gradient(circle, black 30%, transparent 65%);
+            z-index: 1;
+            pointer-events: none; 
+            /* 赋予点亮时的缓慢过渡效果 (1s 极缓点亮) */
+            transition: filter 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .r1 { animation: organic-drift-1 10s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
+        .r2 { animation: organic-drift-2 14s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); width: 150%; height: 150%; top: -25%; left: -25%; }
+
+        /* 修改关键帧动画：提高基础透明度，确保不管怎么波动都可见 */
+        @keyframes organic-drift-1 {
+            0%   { transform: translate(0px, 0px) scale(0.9); opacity: 0.4; }
+            35%  { transform: translate(8%, -8%) scale(1.05); opacity: 0.9; }
+            70%  { transform: translate(-8%, 5%) scale(0.95); opacity: 0.45; }
+            100% { transform: translate(5%, 12%) scale(1.1); opacity: 0.95; }
+        }
+
+        @keyframes organic-drift-2 {
+            0%   { transform: translate(-6%, -4%) scale(1.1); opacity: 0.8; }
+            /* 将之前会完全隐身(0)的状态提高到 0.25，保证留有浅浅的轮廓 */
+            45%  { transform: translate(10%, 15%) scale(0.85); opacity: 0.25; } 
+            80%  { transform: translate(5%, -12%) scale(1.0); opacity: 0.7; }
+            100% { transform: translate(-12%, 6%) scale(0.95); opacity: 0.4; }
+        }
+
+        /* 移除了强硬的 transform 覆盖，只做缓动的亮度滤镜调整 */
+        .huge-btn:hover .r1 { filter: brightness(1.6); }
+        .huge-btn:hover .r2 { filter: brightness(1.3); }
+
+
+        /* --- 底部免责声明 --- */
+        .disclaimer-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            width: 100vw;
+            pointer-events: none; 
+        }
+
+        .disclaimer-section {
+            pointer-events: auto; 
+            width: fit-content; 
+            max-width: 90vw; 
+            padding: 12px 30px; 
+            border: 1px solid var(--border-color);
+            border-radius: 25px; 
+            background: rgba(255, 255, 255, 0.05); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            text-align: center;
+        }
+        
+        .disclaimer-section p {
+            margin: 3px 0;
+            line-height: 1.3;
+            color: var(--text-secondary);
+            font-size: 10px;
+        }
+        
+        .disclaimer-section a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
         .disclaimer-section a:hover {
-            color: var(--color-orange);
             text-decoration: underline;
         }
 
-        /* 移动端适配 */
-        @media (max-width: 480px) {
-            .glass-panel {
-                padding: 35px 25px;
-                border-radius: 30px;
-            }
-            .header h1 {
-                font-size: 19px;
-            }
-            .nav-btn {
-                height: 54px;
-                border-radius: 27px; /* 移动端高度变为54px，半径相应变27px */
-                font-size: 16px;
-            }
+        /* ========== 6. 移动端响应式适配 ========== */
+        @media (max-width: 768px) {
+            .orb-1 { width: 90vw; height: 90vw; top: -5%; left: -15%; }
+            .orb-2 { width: 80vw; height: 80vw; bottom: -5%; right: -15%; }
+            .orb-3 { width: 70vw; height: 70vw; top: 35%; left: 5%; }
+
+            .bg-text { font-size: max(24vw, 90px); line-height: 1.1; width: 120vw; }
+
+            .main-area { flex-direction: column; gap: 8vh; }
+            .huge-btn { width: clamp(260px, 60vw, 400px); }
+            .btn-title { font-size: min(16vw, 180px); }
         }
     </style>
 </head>
 <body>
+
+    <div class="bg-text">
+        海航666航班可视化工具 海航666航班可视化工具 海航666航班可视化工具 海航666航班可视化工具 海航666-航班可视化工具 海航666-航班可视化工具
+    </div>
+
     <div class="bg-canvas">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
     </div>
 
-    <div class="glass-panel">
-        <div class="header">
-            <h1>海航666-航班/航线可视化工具</h1>
-            <p>HNA666 Flight Map</p>
-        </div>
-
-        <div class="nav-group">
-            <a href="666/HNA666_v0313.html" class="nav-btn btn-666">
-                666版本
-            </a>
-            <a href="2666/HNA2666_v0313.html" class="nav-btn btn-2666">
-                2666版本
+    <div class="ui-layer">
+        
+        <div class="top-bar">
+            <a href="https://pan.quark.cn/s/617159da3ecd" target="_blank" class="history-btn">
+                历史数据
             </a>
         </div>
 
-        <div class="disclaimer-section">
-            <p><strong>免责声明</strong></p>
-            <p>v0313 夏秋航班源于 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理；</p>
-            <p>机型/机场信息整理自公开数据，仅供参考。</p>
-            <p>项目已开源至 <strong><a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank">Github</a></strong>，有需求可联系作者。</p>
+        <div class="main-area">
+            <a href="666.html" class="huge-btn">
+                <div class="ripple r1"></div>
+                <div class="ripple r2"></div>
+                <div class="btn-content">
+                    <span class="btn-title">666</span>
+                    <span class="btn-subtitle">2026夏秋航季</span>
+                </div>
+            </a>
+            
+            <a href="2666.html" class="huge-btn">
+                <div class="ripple r1"></div>
+                <div class="ripple r2"></div>
+                <div class="btn-content">
+                    <span class="btn-title">2666</span>
+                    <span class="btn-subtitle">2026夏秋航季</span>
+                </div>
+            </a>
         </div>
+
+        <div class="disclaimer-wrapper">
+            <div class="disclaimer-section">
+                <p><strong>免责声明</strong></p>
+                <p>v0313 夏秋航班源于 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理；</p>
+                <p>机型/机场信息整理自公开数据，仅供参考。</p>
+                <p>项目已开源至 <strong><a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank">Github</a></strong>，有需求可联系作者。</p>
+            </div>
+        </div>
+
     </div>
+
 </body>
 </html>
