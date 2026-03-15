@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>海航666-航班/航线可视化工具</title>
+    <style>
+        :root {
+            --color-pink: #CE6A85;
+            --color-orange: #FF8C61;
+            --color-blue: #4E598C;
+            --primary-color: #8E6289;
+            
+            --bg-color: #f5ebe0;
+            --text-primary: #1D1D1F;
+            --text-secondary: #666666; /* 亮色模式下加深次要文字颜色 */
+            --disclaimer-bg: rgba(255, 255, 255, 0.6); /* 亮色模式下的免责声明背景 */
+            
+            --huge-text: rgba(0, 0, 0, 0.1); 
+            --water-base: rgba(255, 246, 237, 0.35); 
+            --history-bg: rgba(255, 246, 237, 0.15);
+            --border-color: rgba(141, 125, 129, 0.24);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-primary: #F5F5F7;
+                --text-secondary: #A1A1A6;
+                --disclaimer-bg: rgba(255, 255, 255, 0.05); /* 暗色模式免责声明背景 */
+                
+                --huge-text: rgba(255, 255, 255, 0.1); 
+                --water-base: rgba(255, 255, 255, 0.08); 
+                --history-bg: rgba(40, 40, 40, 0.15);
+                --border-color: rgba(255, 255, 255, 0.15);
+            }
+        }
+
+        html {
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh; 
+            font-family: system-ui, sans-serif;
+            background-color: var(--bg-color);
+            overflow: hidden; 
+            position: relative;
+            touch-action: none; 
+            overscroll-behavior: none;
+        }
+
+        .btn-title {
+            display: block;
+            font-size: min(8vw, 240px);
+            font-weight: bold; 
+            letter-spacing: 2px;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            
+            /* [新增] 给中间的巨型数字加上 2px 的粗描边，让它极其厚重 */
+            -webkit-text-stroke: 5px currentColor; 
+        }
+
+        .bg-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100dvh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.7;
+            animation: float 20s infinite alternate ease-in-out;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .orb { opacity: 0.5; filter: blur(100px); }
+        }
+
+        .orb-1 { width: 50vw; height: 50vw; min-width: 400px; background: var(--color-pink); top: -15%; left: -10%; }
+        .orb-2 { width: 45vw; height: 45vw; min-width: 350px; background: var(--color-orange); bottom: -15%; right: -10%; animation-delay: -5s; animation-duration: 24s; }
+        .orb-3 { width: 40vw; height: 40vw; min-width: 300px; background: var(--color-blue); top: 35%; left: 30%; animation-delay: -9s; animation-duration: 28s; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(6vw, -6vh) scale(1.1); }
+            66% { transform: translate(-4vw, 5vh) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        .bg-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 110vw; 
+            font-size: max(14vw, 180px); 
+            font-weight: 900; /* 背景英文字母可以支持到900 */
+            line-height: 1.1; 
+            color: var(--huge-text);
+            word-break: break-all; 
+            text-align: justify;
+            z-index: 1;
+            pointer-events: none;
+            user-select: none;
+            mix-blend-mode: overlay; 
+        }
+
+        /* --- 全新 UI 容器 --- */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100dvh;
+            display: flex;
+            justify-content: center; /* 仅用于让中间大按钮居中 */
+            align-items: center;
+            z-index: 10;
+            pointer-events: none; 
+        }
+
+        /* --- 顶部栏 (绝对定位) --- */
+        .top-bar {
+            position: absolute;
+            top: 4vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
+        .history-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            /* 统一内边距与圆角 */
+            padding: 12px 32px;
+            border-radius: 30px;
+            
+            background: var(--history-bg); 
+            backdrop-filter: blur(25px);   
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255,255,255,0.3); 
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold; /* 使用系统支持的粗体 */
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+        }
+
+        .history-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.4);
+        }
+        @media (prefers-color-scheme: dark) {
+            .history-btn:hover { background: rgba(80, 80, 80, 0.4); }
+        }
+
+        /* --- 中心交互区域 --- */
+        .main-area {
+            display: flex;
+            flex-direction: row; 
+            align-items: center;
+            justify-content: center;
+            gap: 12vw; 
+            width: 100vw;
+            pointer-events: none; 
+        }
+
+        .huge-btn {
+            pointer-events: auto; 
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: clamp(280px, 32vw, 480px); 
+            aspect-ratio: 1 / 1; 
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .btn-content {
+            position: relative;
+            z-index: 10; 
+            text-align: center;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .btn-title {
+            display: block;
+            font-size: min(8vw, 240px);
+            font-weight: bold; /* 恢复粗体 */
+            letter-spacing: 2px;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+
+        .btn-subtitle {
+            display: block;
+            font-size: 18px; 
+            color: var(--text-secondary);
+            font-weight: 200;
+            letter-spacing: 10px;
+            margin-top: 5px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .huge-btn:hover .btn-content { transform: scale(1.08); }
+
+        /* --- 幽灵水波纹 --- */
+        .ripple {
+            position: absolute;
+            top: -15%; left: -15%;
+            width: 130%; height: 130%;
+            border-radius: 50%;
+            background: var(--water-base);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            -webkit-mask-image: radial-gradient(circle, black 30%, transparent 65%);
+            mask-image: radial-gradient(circle, black 30%, transparent 65%);
+            z-index: 1;
+            pointer-events: none; 
+            transition: filter 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .r1 { animation: organic-drift-1 10s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
+        .r2 { animation: organic-drift-2 14s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); width: 150%; height: 150%; top: -25%; left: -25%; }
+
+        @keyframes organic-drift-1 {
+            0%   { transform: translate(0px, 0px) scale(0.9); opacity: 0.4; }
+            35%  { transform: translate(8%, -8%) scale(1.05); opacity: 0.9; }
+            70%  { transform: translate(-8%, 5%) scale(0.95); opacity: 0.45; }
+            100% { transform: translate(5%, 12%) scale(1.1); opacity: 0.95; }
+        }
+
+        @keyframes organic-drift-2 {
+            0%   { transform: translate(-6%, -4%) scale(1.1); opacity: 0.8; }
+            45%  { transform: translate(10%, 15%) scale(0.85); opacity: 0.25; } 
+            80%  { transform: translate(5%, -12%) scale(1.0); opacity: 0.7; }
+            100% { transform: translate(-12%, 6%) scale(0.95); opacity: 0.4; }
+        }
+
+        .huge-btn:hover .r1 { filter: brightness(1.6); }
+        .huge-btn:hover .r2 { filter: brightness(1.3); }
+
+
+        /* --- 底部免责声明 (绝对定位) --- */
+        .disclaimer-wrapper {
+            position: absolute;
+            bottom: 3vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            pointer-events: none; 
+        }
+
+        .disclaimer-section {
+            pointer-events: auto; 
+            width: fit-content; 
+            /* [修改] 将最大宽度放宽到 95%，或者直接删掉这行，让它完全不受屏幕限制 */
+            max-width: 95vw; 
+            /* [修改] 移动端适当减小左右 padding (从32px改为20px)，给文字留出更多横向空间 */
+            padding: 12px 20px; 
+            border-radius: 30px; 
+            
+            border: 1px solid var(--border-color);
+            background: var(--disclaimer-bg); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            text-align: center;
+        }
+
+        .disclaimer-section p {
+            margin: 3px 0;
+            line-height: 1.3;
+            color: var(--text-secondary);
+            
+            /* [新增] 强制文字永远在同一行，绝不换行 */
+            white-space: nowrap; 
+            
+            /* [修改] 动态字号：最小 9px，首选 2.6vw，最大 11px。屏幕再小也能挤在一行 */
+            font-size: clamp(9px, 2.6vw, 11px); 
+            
+            /* [新增] 如果你觉得免责声明不需要那么粗，可以把它的描边抵消掉 */
+            -webkit-text-stroke: 0px transparent;
+        }
+        
+        .disclaimer-section a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .disclaimer-section a:hover {
+            text-decoration: underline;
+        }
+
+        /* ========== 6. 移动端响应式适配 ========== */
+        @media (max-width: 768px) {
+            .orb-1 { width: 90vw; height: 90vw; top: -5%; left: -15%; }
+            .orb-2 { width: 80vw; height: 80vw; bottom: -5%; right: -15%; }
+            .orb-3 { width: 70vw; height: 70vw; top: 35%; left: 5%; }
+
+            .bg-text { font-size: max(24vw, 90px); line-height: 1.1; width: 120vw; }
+
+            .main-area { flex-direction: column; gap: 8vh; }
+            .huge-btn { width: clamp(260px, 60vw, 400px); }
+            .btn-title { font-size: min(16vw, 180px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-text">
+        海航666航班可视化工具 海航666航班可视化工具 海航666航班可视化工具 海航666航班可视化工具 海航666-航班可视化工具 海航666-航班可视化工具
+    </div>
+
+    <div class="bg-canvas">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="ui-layer">
+        
+        <div class="top-bar">
+            <a href="https://pan.quark.cn/s/617159da3ecd" target="_blank" class="history-btn">
+                历史数据
+            </a>
+        </div>
+
+        <div class="main-area">
+            <a href="666.html" class="huge-btn">
+                <div class="ripple r1"></div>
+                <div class="ripple r2"></div>
+                <div class="btn-content">
+                    <span class="btn-title">666</span>
+                    <span class="btn-subtitle">2026夏秋航季</span>
+                </div>
+            </a>
+            
+            <a href="2666.html" class="huge-btn">
+                <div class="ripple r1"></div>
+                <div class="ripple r2"></div>
+                <div class="btn-content">
+                    <span class="btn-title">2666</span>
+                    <span class="btn-subtitle">2026夏秋航季</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="disclaimer-wrapper">
+            <div class="disclaimer-section">
+                <p><strong>免责声明</strong></p>
+                <p>v0313 夏秋航班源于 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理；</p>
+                <p>机型/机场信息整理自公开数据，仅供参考。</p>
+                <p>项目已开源至 <strong><a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank">Github</a></strong>，有需求可联系作者。</p>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
