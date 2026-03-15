@@ -232,17 +232,18 @@
 
         .btn-title {
             display: block;
-            font-size: min(8vw, 240px);
-            font-weight: 800; /* 保持加粗以使描边更清晰 */
+            /* 默认（横屏端）维持现状的 42% 比例 */
+            font-size: calc(var(--btn-size) * 0.42);
+            font-weight: 800; 
             letter-spacing: 2px;
             
-            /* 文字描边：使用 -webkit-text-stroke 属性 */
             color: var(--text-primary); 
-            -webkit-text-stroke: 5px var(--text-primary); /* 设置描边粗细和颜色 */
+            /* [修改] 描边加粗到 5px */
+            -webkit-text-stroke: 5px var(--text-primary); 
             
             text-shadow: 0 4px 15px rgba(0,0,0,0.1); 
         }
-
+        
         .btn-subtitle {
             display: block;
             font-size: 18px; 
@@ -264,7 +265,7 @@
             .main-area {
                 flex-direction: row; /* 横向排列 */
                 /* 你的逻辑：间距可以为 2/3 按钮长度 */
-                gap: calc(var(--btn-size) * 0.666); 
+                gap: calc(var(--btn-size) * 0.618); 
             }
         }
 
@@ -272,13 +273,13 @@
         @media (orientation: portrait) {
             .main-area {
                 flex-direction: column; /* 纵向排列，相对中线对齐 */
-                /* 你的逻辑：间距可以为 0 */
                 gap: 0; 
             }
             .orb-1 { width: 90vw; height: 90vw; top: -5%; left: -15%; }
             .orb-2 { width: 80vw; height: 80vw; bottom: -5%; right: -15%; }
             .orb-3 { width: 70vw; height: 70vw; top: 35%; left: 5%; }
             .bg-text { font-size: max(24vw, 90px); line-height: 1.1; width: 120vw; }
+            .btn-title { font-size: calc(var(--btn-size) * 0.42); }
         }
 
         /* --- 幽灵水波纹 --- */
