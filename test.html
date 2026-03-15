@@ -13,13 +13,16 @@
             
             --bg-color: #f5ebe0;
             --text-primary: #1D1D1F;
-            --text-secondary: #666666; /* 亮色模式下加深次要文字颜色 */
-            --disclaimer-bg: rgba(255, 255, 255, 0.6); /* 亮色模式下的免责声明背景 */
+            --text-secondary: #666666; 
+            --disclaimer-bg: rgba(255, 255, 255, 0.6); 
             
             --huge-text: rgba(0, 0, 0, 0.1); 
             --water-base: rgba(255, 246, 237, 0.35); 
             --history-bg: rgba(255, 246, 237, 0.15);
             --border-color: rgba(141, 125, 129, 0.24);
+
+            /* 定义核心动态尺寸变量（默认按横屏PC逻辑） */
+            --btn-size: clamp(220px, 28vw, 400px); 
         }
 
         @media (prefers-color-scheme: dark) {
@@ -27,12 +30,20 @@
                 --bg-color: #000000;
                 --text-primary: #F5F5F7;
                 --text-secondary: #A1A1A6;
-                --disclaimer-bg: rgba(255, 255, 255, 0.05); /* 暗色模式免责声明背景 */
+                --disclaimer-bg: rgba(255, 255, 255, 0.05); 
                 
                 --huge-text: rgba(255, 255, 255, 0.1); 
                 --water-base: rgba(255, 255, 255, 0.08); 
                 --history-bg: rgba(40, 40, 40, 0.15);
                 --border-color: rgba(255, 255, 255, 0.15);
+            }
+        }
+
+        /* 针对竖屏（手机/窄屏）覆盖尺寸变量 */
+        @media (orientation: portrait) {
+            :root {
+                /* 核心：宽度不超过屏幕 70%，同时高度不超过可用区域的一半(约38dvh)，确保上下堆叠时绝对不溢出，同时最大限制 320px */
+                --btn-size: min(70vw, 38dvh, 320px); 
             }
         }
 
@@ -52,18 +63,7 @@
             overflow: hidden; 
             position: relative;
             touch-action: none; 
-            overscroll-behavior: none;
-        }
-
-        .btn-title {
-            display: block;
-            font-size: min(8vw, 240px);
-            font-weight: bold; 
-            letter-spacing: 2px;
-            text-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-            
-            /* [新增] 给中间的巨型数字加上 2px 的粗描边，让它极其厚重 */
-            -webkit-text-stroke: 5px currentColor; 
+            overscroll-behavior: none; 
         }
 
         .bg-canvas {
@@ -103,7 +103,7 @@
             transform: translate(-50%, -50%);
             width: 110vw; 
             font-size: max(14vw, 180px); 
-            font-weight: 900; /* 背景英文字母可以支持到900 */
+            font-weight: 900; 
             line-height: 1.1; 
             color: var(--huge-text);
             word-break: break-all; 
@@ -114,25 +114,24 @@
             mix-blend-mode: overlay; 
         }
 
-        /* --- 全新 UI 容器 --- */
+        /* ========== 核心重构：安全分配布局层 ========== */
         .ui-layer {
             position: absolute;
             top: 0; left: 0;
             width: 100vw; height: 100dvh;
             display: flex;
-            justify-content: center; /* 仅用于让中间大按钮居中 */
+            flex-direction: column; /* 垂直排布 */
+            justify-content: space-between; /* 头、中、尾自动顶开 */
             align-items: center;
             z-index: 10;
             pointer-events: none; 
+            padding: 4dvh 0 3dvh 0; /* 头尾的安全边距 */
+            box-sizing: border-box;
         }
 
-        /* --- 顶部栏 (绝对定位) --- */
+        /* --- 顶部栏（不再浮空，实打实占据物理空间） --- */
         .top-bar {
-            position: absolute;
-            top: 4vh;
-            width: 100vw;
-            display: flex;
-            justify-content: center;
+            flex-shrink: 0; /* 保证不被压缩 */
             pointer-events: auto;
         }
 
@@ -140,10 +139,8 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            /* 统一内边距与圆角 */
             padding: 12px 32px;
             border-radius: 30px;
-            
             background: var(--history-bg); 
             backdrop-filter: blur(25px);   
             -webkit-backdrop-filter: blur(25px);
@@ -151,7 +148,7 @@
             color: var(--text-primary);
             text-decoration: none;
             font-size: 14px;
-            font-weight: bold; /* 使用系统支持的粗体 */
+            font-weight: bold; 
             transition: all 0.3s ease;
             box-shadow: 0 8px 20px rgba(0,0,0,0.06);
         }
@@ -164,17 +161,54 @@
             .history-btn:hover { background: rgba(80, 80, 80, 0.4); }
         }
 
-        /* --- 中心交互区域 --- */
-        .main-area {
-            display: flex;
-            flex-direction: row; 
-            align-items: center;
-            justify-content: center;
-            gap: 12vw; 
-            width: 100vw;
-            pointer-events: none; 
+        /* --- 底部免责声明（实打实占据物理空间） --- */
+        .disclaimer-wrapper {
+            flex-shrink: 0; /* 保证不被压缩 */
+            pointer-events: auto; 
         }
 
+        .disclaimer-section {
+            width: fit-content; 
+            max-width: 95vw; 
+            padding: 12px 20px; 
+            border-radius: 30px; 
+            border: 1px solid var(--border-color);
+            background: var(--disclaimer-bg); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            text-align: center;
+        }
+        
+        .disclaimer-section p {
+            margin: 3px 0;
+            line-height: 1.3;
+            color: var(--text-secondary);
+            white-space: nowrap; 
+            font-size: clamp(9px, 2.6vw, 11px); 
+        }
+        
+        .disclaimer-section a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .disclaimer-section a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- 中心交互区域（自动填满剩余的所有空间） --- */
+        .main-area {
+            flex: 1; /* 吸干头部和尾部之外的所有空间 */
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none; 
+            margin: 0dvh 0;
+        }
+
+        /* --- 巨型按钮通用设置 --- */
         .huge-btn {
             pointer-events: auto; 
             position: relative;
@@ -182,8 +216,9 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: clamp(280px, 32vw, 480px); 
-            aspect-ratio: 1 / 1; 
+            /* 宽高严格绑定根变量 */
+            width: var(--btn-size); 
+            height: var(--btn-size); 
             text-decoration: none;
             color: var(--text-primary);
         }
@@ -198,8 +233,13 @@
         .btn-title {
             display: block;
             font-size: min(8vw, 240px);
-            font-weight: bold; /* 恢复粗体 */
+            font-weight: 800; /* 保持加粗以使描边更清晰 */
             letter-spacing: 2px;
+            
+            /* 文字描边：使用 -webkit-text-stroke 属性 */
+            color: var(--text-primary); 
+            -webkit-text-stroke: 5px var(--text-primary); /* 设置描边粗细和颜色 */
+            
             text-shadow: 0 4px 15px rgba(0,0,0,0.1); 
         }
 
@@ -207,13 +247,39 @@
             display: block;
             font-size: 18px; 
             color: var(--text-secondary);
-            font-weight: 200;
+            
+            /* 极细字体：将字重设为 300 (Light) */
+            font-weight: 300; 
+            
             letter-spacing: 10px;
             margin-top: 5px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
         .huge-btn:hover .btn-content { transform: scale(1.08); }
+
+        /* --- 响应式排版逻辑 --- */
+        
+        /* 横屏 (PC/平板等) */
+        @media (orientation: landscape) {
+            .main-area {
+                flex-direction: row; /* 横向排列 */
+                /* 你的逻辑：间距可以为 2/3 按钮长度 */
+                gap: calc(var(--btn-size) * 0.666); 
+            }
+        }
+
+        /* 竖屏 (手机等) */
+        @media (orientation: portrait) {
+            .main-area {
+                flex-direction: column; /* 纵向排列，相对中线对齐 */
+                /* 你的逻辑：间距可以为 0 */
+                gap: 0; 
+            }
+            .orb-1 { width: 90vw; height: 90vw; top: -5%; left: -15%; }
+            .orb-2 { width: 80vw; height: 80vw; bottom: -5%; right: -15%; }
+            .orb-3 { width: 70vw; height: 70vw; top: 35%; left: 5%; }
+            .bg-text { font-size: max(24vw, 90px); line-height: 1.1; width: 120vw; }
+        }
 
         /* --- 幽灵水波纹 --- */
         .ripple {
@@ -251,70 +317,6 @@
         .huge-btn:hover .r1 { filter: brightness(1.6); }
         .huge-btn:hover .r2 { filter: brightness(1.3); }
 
-
-        /* --- 底部免责声明 (绝对定位) --- */
-        .disclaimer-wrapper {
-            position: absolute;
-            bottom: 3vh;
-            width: 100vw;
-            display: flex;
-            justify-content: center;
-            pointer-events: none; 
-        }
-
-        .disclaimer-section {
-            pointer-events: auto; 
-            width: fit-content; 
-            /* [修改] 将最大宽度放宽到 95%，或者直接删掉这行，让它完全不受屏幕限制 */
-            max-width: 95vw; 
-            /* [修改] 移动端适当减小左右 padding (从32px改为20px)，给文字留出更多横向空间 */
-            padding: 12px 20px; 
-            border-radius: 30px; 
-            
-            border: 1px solid var(--border-color);
-            background: var(--disclaimer-bg); 
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            text-align: center;
-        }
-
-        .disclaimer-section p {
-            margin: 3px 0;
-            line-height: 1.3;
-            color: var(--text-secondary);
-            
-            /* [新增] 强制文字永远在同一行，绝不换行 */
-            white-space: nowrap; 
-            
-            /* [修改] 动态字号：最小 9px，首选 2.6vw，最大 11px。屏幕再小也能挤在一行 */
-            font-size: clamp(9px, 2.6vw, 11px); 
-            
-            /* [新增] 如果你觉得免责声明不需要那么粗，可以把它的描边抵消掉 */
-            -webkit-text-stroke: 0px transparent;
-        }
-        
-        .disclaimer-section a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: bold;
-        }
-        
-        .disclaimer-section a:hover {
-            text-decoration: underline;
-        }
-
-        /* ========== 6. 移动端响应式适配 ========== */
-        @media (max-width: 768px) {
-            .orb-1 { width: 90vw; height: 90vw; top: -5%; left: -15%; }
-            .orb-2 { width: 80vw; height: 80vw; bottom: -5%; right: -15%; }
-            .orb-3 { width: 70vw; height: 70vw; top: 35%; left: 5%; }
-
-            .bg-text { font-size: max(24vw, 90px); line-height: 1.1; width: 120vw; }
-
-            .main-area { flex-direction: column; gap: 8vh; }
-            .huge-btn { width: clamp(260px, 60vw, 400px); }
-            .btn-title { font-size: min(16vw, 180px); }
-        }
     </style>
 </head>
 <body>
