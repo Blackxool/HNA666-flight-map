@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>海航666-航班/航线可视化工具</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&display=swap" rel="stylesheet">
     <style>
         :root {
             --color-pink: #CE6A85;
@@ -20,7 +23,7 @@
             /* 亮色模式下水波纹基础色设为较暗的颜色，使其显示变暗效果 */
             --water-base: rgba(0, 0, 0, 0.1); 
             --history-bg: rgba(255, 246, 237, 0.15);
-            --border-color: rgba(141, 125, 129, 0.25);
+            --border-color: rgba(141, 125, 129, 0.15);
 
             /* 亮色模式下的 btn-title 颜色：中间白，描边黑 */
             --title-fill: #FFFFFF;
@@ -39,9 +42,9 @@
                 
                 --huge-text: rgba(255, 255, 255, 0.1); 
                 /* 暗色模式下水波纹基础色设为较亮的颜色，使其显示变亮效果 */
-                --water-base: rgba(255, 246, 237, 0.25); 
+                --water-base: rgba(255, 246, 237, 0.1); 
                 --history-bg: rgba(40, 40, 40, 0.15);
-                --border-color: rgba(255, 255, 255, 0.15);
+                --border-color: rgba(255, 255, 255, 0.05);
 
                 /* 暗色模式下的 btn-title 颜色：中间白，描边白 */
                 --title-fill: #FFFFFF;
@@ -96,9 +99,9 @@
             .orb { opacity: 0.5; filter: blur(100px); }
         }
 
-        .orb-1 { width: 70vw; height: 70vw; min-width: 400px; background: var(--color-pink); top: -15%; left: -10%; }
-        .orb-2 { width: 60vw; height: 60vw; min-width: 350px; background: var(--color-orange); bottom: -15%; right: -10%; animation-delay: -5s; animation-duration: 24s; }
-        .orb-3 { width: 50vw; height: 50vw; min-width: 300px; background: var(--color-blue); top: 35%; left: 30%; animation-delay: -9s; animation-duration: 28s; }
+        .orb-1 { width: 50vw; height: 50vw; min-width: 400px; background: var(--color-pink); top: -15%; left: -10%; }
+        .orb-2 { width: 45vw; height: 45vw; min-width: 350px; background: var(--color-orange); bottom: -15%; right: -10%; animation-delay: -5s; animation-duration: 24s; }
+        .orb-3 { width: 40vw; height: 40vw; min-width: 300px; background: var(--color-blue); top: 35%; left: 30%; animation-delay: -9s; animation-duration: 28s; }
 
         @keyframes float {
             0% { transform: translate(0, 0) scale(1); }
@@ -251,16 +254,13 @@
 
         .btn-title {
             display: block;
-            /* [修改] 指定专属字体 Consolas，并用系统无衬线体作为备选 */
-            font-family: Consolas, system-ui, sans-serif;
+            font-family: 'Montserrat', system-ui, sans-serif;
             font-size: calc(var(--btn-size) * 0.33);
-            /* [修改] 使用最粗字重 */
-            font-weight: 900; 
+            /*使用最粗字重 */
+            font-weight: 800; 
             letter-spacing: 2px;
-            
-            /* [修改] 引用 CSS 变量实现昼夜颜色自动切换，描边加粗 */
             color: var(--title-fill); 
-            -webkit-text-stroke: 4px var(--title-fill); /* 描边加粗 */
+            -webkit-text-stroke: 0px var(--title-fill); /* 描边加粗 */
             
             text-shadow: 0 4px 15px rgba(0,0,0,0.1); 
             line-height: 1; 
@@ -297,9 +297,9 @@
                 flex-direction: column; 
                 gap: 0; 
             }
-            .orb-1 { width: 40vw; height: 40vw; top: -5%; left: -15%; }
-            .orb-2 { width: 50vw; height: 50vw; bottom: -5%; right: -15%; }
-            .orb-3 { width: 60vw; height: 60vw; top: 35%; left: 5%; }
+            .orb-1 { width: 70vw; height: 70vw; top: -5%; left: -15%; }
+            .orb-2 { width: 60vw; height: 60vw; bottom: -5%; right: -15%; }
+            .orb-3 { width: 50vw; height: 50vw; top: 35%; left: 5%; }
             .bg-text { font-size: max(24vw, 90px); line-height: 1.1; width: 120vw; }
 
             .btn-title { font-size: min(calc(var(--btn-size) * 1), 100px); }
