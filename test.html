@@ -18,6 +18,10 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --shadow-medium: rgba(0, 0, 0, 0.15);
             --backdrop-filter: blur(20px);
+            
+            /* 航线专用动态颜色 */
+            --route-arrow-color: #555555; /* 明亮模式下的深灰箭头 */
+            --route-outline-color: #ffffff; /* 明亮模式下的白色描边 */
         }
         
         @media (prefers-color-scheme: dark) {
@@ -30,45 +34,61 @@
                 --border-color-dark: rgba(141, 125, 129, 0.5);
                 --shadow-light: rgba(0, 0, 0, 0.3);
                 --shadow-medium: rgba(0, 0, 0, 0.5);
+                
+                /* 暗黑模式适配 */
+                --route-arrow-color: #ffffff; /* 暗黑模式下的纯白箭头 */
+                --route-outline-color: #000000; /* 暗黑模式下的黑色描边 */
             }
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
+        /* 强制全局系统 UI 字体 */
         html, body {
             margin: 0; padding: 0; height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background: var(--background-primary); overflow: hidden;
         }
         
         #map { height: 100vh; width: 100vw; background-color: var(--background-primary); }
         .leaflet-control-zoom { display: none !important; }
         
-        /* 胶囊机场按钮 */
+        /* 胶囊机场按钮：彻底重构为 GPU 缩放动画，消灭圆角方块 */
         .airport-marker {
-            position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+            position: absolute; left: 0; top: 0; 
             display: flex; align-items: center; justify-content: center;
             background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            border: 1px solid var(--border-color-dark); border-radius: 14px;
+            border: 1px solid var(--border-color-dark);
+            border-radius: 20px; 
+            padding: 0 10px;
+            height: 22px; line-height: 20px;
+            min-width: 22px; max-width: 150px;
             color: var(--text-primary); font-size: 11px; font-weight: 700; cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 4px 10px; white-space: nowrap; overflow: hidden; opacity: 0.65;
+            white-space: nowrap; overflow: hidden;
             box-shadow: 0 4px 12px var(--shadow-light);
-            min-width: 40px; text-shadow: 0 0 2px var(--background-secondary);
+            text-shadow: 0 0 2px var(--background-secondary);
+            user-select: none; -webkit-user-select: none;
+            
+            transform-origin: center center;
+            transform: translate(-50%, -50%) scale(1);
+            transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, color 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .airport-marker.collapsed {
-            width: 14px !important; height: 14px !important; min-width: 0;
-            padding: 0 !important; border-radius: 7px; color: transparent;
+            max-width: 22px !important;
+            padding: 0 !important;
+            color: transparent;
             border-width: 2px;
+            transform: translate(-50%, -50%) scale(0.65);
         }
         
-        .airport-marker:hover { opacity: 0.95; transform: translate(-50%, -50%) scale(1.05); z-index: 1000 !important; }
+        .airport-marker:hover { opacity: 0.95; z-index: 1000 !important; }
+        .airport-marker:not(.collapsed):hover { transform: translate(-50%, -50%) scale(1.05); }
         
         .airport-marker.selected {
             background: var(--text-primary); color: var(--background-primary);
-            border-color: transparent; opacity: 1; transform: translate(-50%, -50%) scale(1.1);
-            text-shadow: none; z-index: 1000 !important;
+            border-color: transparent; opacity: 1; text-shadow: none; z-index: 1000 !important;
+            transform: translate(-50%, -50%) scale(1.1);
         }
         
         /* 筛选面板按钮与背景 */
@@ -145,7 +165,7 @@
         .date-ticks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; border-radius: 14px; }
         .date-tick { position: absolute; font-size: 11px; color: var(--text-primary); font-weight: 600; transform: translateX(-50%); line-height: 28px; white-space: nowrap; opacity: 0.8; text-shadow: 0 0 3px var(--background-primary), 0 0 5px var(--background-primary); }
         
-        /* 图例更新：还原中心细彩线样式 */
+        /* 图例更新：适配新线宽 (5px / 3px) */
         .top-right-legend {
             position: fixed; top: 20px; right: 20px; z-index: 1000;
             display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
@@ -153,26 +173,23 @@
         }
         .legend-row {
             display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900;
-            color: #222; 
-            text-shadow: -0.4px -0.4px 0 #fff, 0.4px -0.4px 0 #fff, -0.4px 0.4px 0 #fff, 0.4px 0.4px 0 #fff, 0 1px 3px rgba(0,0,0,0.15);
+            color: var(--text-primary); 
+            text-shadow: 0 1px 3px var(--background-secondary);
         }
         .legend-line {
-            width: 26px; height: 5px; border-radius: 2.5px; 
-            background: #ffffff;
-            border: 1px solid var(--legend-color);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
-            position: relative;
+            width: 26px; height: 5px; background: var(--route-outline-color);
+            position: relative; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3); border-radius: 2.5px;
         }
-        @media (prefers-color-scheme: dark) {
-            .legend-line { background: #000000; }
+        .legend-line-inner {
+            width: 100%; height: 3px; background: var(--legend-color); border-radius: 1.5px;
         }
         .legend-line::after {
             content: ''; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 0; height: 0;
-            border-top: 1.5px solid transparent;
-            border-bottom: 1.5px solid transparent;
-            border-left: 3px solid var(--legend-color);
+            transform: translate(-50%, -50%) rotate(45deg);
+            width: 5px; height: 5px;
+            border-top: 1.5px solid var(--route-arrow-color);
+            border-right: 1.5px solid var(--route-arrow-color);
         }
 
         /* 左置免责声明 & 版权 */
@@ -181,7 +198,8 @@
             backdrop-filter: var(--backdrop-filter) !important; -webkit-backdrop-filter: var(--backdrop-filter) !important;
             border-radius: 10px 0 0 0 !important; color: var(--text-secondary) !important; 
             font-size: 10px !important; border-top: 1px solid var(--border-color); border-left: 1px solid var(--border-color);
-            padding: 2px 8px !important; display: flex; align-items: center; gap: 8px;
+            padding: 4px 10px !important; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
+            line-height: 1.4;
         }
         .leaflet-control-attribution a { color: var(--primary-color) !important; text-decoration: none; }
         
@@ -190,9 +208,8 @@
             margin-right: 6px; padding-right: 8px; border-right: 1px solid var(--border-color-dark);
         }
         
-        /* 免责声明弹窗：固定靠屏幕右侧对齐并留边距 */
         .inline-disclaimer-popup {
-            position: fixed; bottom: 30px; right: 15px; width: 220px; z-index: 10000;
+            position: fixed; bottom: 35px; right: 15px; width: 240px; z-index: 10000;
             background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
             border: 1px solid var(--border-color); border-radius: 16px; padding: 12px 14px;
             font-size: 11px; font-weight: normal; color: var(--text-primary); line-height: 1.5;
@@ -261,7 +278,7 @@
             flex: 0 0 80px; 
             position: relative; z-index: 2;
         }
-        /* 城市名字体调大 */
+        
         .station-name { 
             width: 100%; font-size: 22px; font-weight: 900; color: var(--text-primary); 
             text-align: center; line-height: 1.1; margin-bottom: 4px; 
@@ -322,19 +339,15 @@
         .date-chunk { white-space: nowrap; }
         
         /* 航线内外线层样式 */
-        path.route-inner { stroke: #ffffff !important; }
-        @media (prefers-color-scheme: dark) { path.route-inner { stroke: #000000 !important; } }
         .route-hitbox { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        
-        /* 新增：箭头平滑过渡特效 */
-        .route-decor-arrow { transition: opacity 0.3s ease; }
+        .route-anim-layer { transition: opacity 0.3s ease; } /* CSS 视野透明度过渡 */
         
         @media (max-width: 768px) {
             .panel-backdrop { width: calc(100vw - 40px); height: 420px; }
             .control-panel { width: calc(100vw - 40px); height: 430px; }
             #info-panel { width: 380px; max-width: calc(100vw - 40px); max-height: 56vh; padding: 0; }
             .top-right-legend { top: 15px; right: 15px; }
-            .leaflet-control-attribution { max-width: 65vw; }
+            .leaflet-control-attribution { max-width: 85vw; }
         }
     </style>
     <style id="dynamic-route-styles"></style>
@@ -346,9 +359,15 @@
     <div class="panel-backdrop" id="panel-backdrop"></div>
     
     <div class="top-right-legend">
-        <div class="legend-row"><div class="legend-line" style="border-color: #FF8C61; --legend-color: #FF8C61;"></div>早班</div>
-        <div class="legend-row"><div class="legend-line" style="border-color: #CE6A85; --legend-color: #CE6A85;"></div>早晚班</div>
-        <div class="legend-row"><div class="legend-line" style="border-color: #4E598C; --legend-color: #4E598C;"></div>晚班</div>
+        <div class="legend-row">
+            <div class="legend-line" style="--legend-color: #FF8C61;"><div class="legend-line-inner"></div></div>早班
+        </div>
+        <div class="legend-row">
+            <div class="legend-line" style="--legend-color: #CE6A85;"><div class="legend-line-inner"></div></div>早晚班
+        </div>
+        <div class="legend-row">
+            <div class="legend-line" style="--legend-color: #4E598C;"><div class="legend-line-inner"></div></div>晚班
+        </div>
     </div>
     
     <div class="control-panel" id="control-panel">
@@ -36996,8 +37015,9 @@
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([33.69481845, 110.698633], 5);
         let currentTileLayer = null;
 
+        // 全新的底部来源与免责申明展示
         L.control.attribution({position: 'bottomright', prefix: false}).addTo(map);
-        map.attributionControl.addAttribution('<span class="inline-disclaimer-wrapper">ℹ️ 免责声明<div class="inline-disclaimer-popup">基于飞友候机厅Avia整理；<br>按真实航线绘制，部分航段可能不在可售范围。<br><a href="#" style="text-decoration: underline;">查看最新动态</a></div></span>&copy; <a href="https://carto.com/" target="_blank">CARTO</a>');
+        map.attributionControl.addAttribution('航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理 | 项目已开源至 <strong><a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank">Github</a></strong> | <span class="inline-disclaimer-wrapper" style="cursor:help;">免责申明<div class="inline-disclaimer-popup">机场、机型等信息整理自公开数据，仅供参考。网站仅提供信息查询及可视化，所涉及公司名称及标识均归其各自所有者所有，不存在任何隶属或合作关系。</div></span>&copy; <a href="https://carto.com/" target="_blank">CARTO</a>');
 
         function updateMapTheme(e) {
             const isDark = e.matches;
@@ -37010,7 +37030,6 @@
         
         let activeRouteKey = null, routeLayers = [], airportMarkers = [], selectedAirport = null, panelVisible = false, isAnimating = false;
         
-        // 全局动态航线数组，用于视野内外的透明度控制
         let renderedRouteObjects = [];
         
         function toggleControlPanel() {
@@ -37052,7 +37071,6 @@
             matchingMappedFlights.forEach(mappedInfo => {
                 const flight = mappedInfo.flight;
                 
-                // 早晚班独立色彩体系
                 const themeColor = flight.is_morning ? '#FF8C61' : '#4E598C';
                 const bgIcon = flight.is_morning ? '☀️' : '🌙';
                 const logoHtml = `<img class="card-bg-logo" src="logo/${flight.airline}.png" alt="${flight.airline}" onerror="this.style.display='none'">`;
@@ -37061,6 +37079,14 @@
                 const daysNames = ['一', '二', '三', '四', '五', '六', '日'];
                 let circlesHTML = daysArray.map(d => `<div class="day-circle" style="${flight.days.includes(d) ? `background-color: ${themeColor}; color: white; border-color: ${themeColor};` : ''}">${daysNames[d-1]}</div>`).join('');
                 
+                // 机型混合展示逻辑：如果是大中小混合或者有分割符，则统一为默认
+                let displaySize = flight.aircraft_size;
+                if (displaySize && displaySize.match(/[大中小]型/g) && displaySize.match(/[大中小]型/g).length > 1) {
+                    displaySize = '默认';
+                } else if (displaySize && displaySize.includes('/')) {
+                    displaySize = '默认';
+                }
+
                 let flowHTML = `<div class="flight-flow">`;
                 for(let i = 0; i < flight.route.length; i++) {
                     const aptFull = flight.route[i]; const [city, apt] = aptFull.split('/');
@@ -37077,7 +37103,6 @@
                         if (n) { depTime = n.dep.replace('次日','+1'); depNote = n.dep_note; } 
                     }
 
-                    // 智能字体颜色判断逻辑：预测变灰，否则赋予对应的早/晚班主题色
                     let isArrPred = arrNote && arrNote.includes('预测');
                     let isDepPred = depNote && depNote.includes('预测');
 
@@ -37098,9 +37123,7 @@
                     if (i < flight.route.length - 1) {
                         const isLegTicketable = flight.ticketable_segments.includes(`${aptFull}-${flight.route[i+1]}`);
                         const warningElement = isLegTicketable ? '' : `<div class="arrow-warning">⚠</div>`;
-                        // 连接线颜色同样追随航班早/晚属性
                         const strokeColor = isLegTicketable ? themeColor : 'var(--border-color-dark)';
-                        const strokeStyle = isLegTicketable ? 'solid' : 'dashed';
 
                         flowHTML += `
                             <div class="segment-arrow-container">
@@ -37121,7 +37144,10 @@
                     <div class="flight-card">
                         ${logoHtml}
                         <div class="card-bg-icon">${bgIcon}</div>
-                        <div class="flight-card-header"><span class="flight-no-title">${flight.airline} ${flight.flight_number}</span><span class="aircraft-type-tag">${flight.aircraft_type}</span></div>
+                        <div class="flight-card-header">
+                            <span class="flight-no-title">${flight.airline} ${flight.flight_number}</span>
+                            <span class="aircraft-type-tag">${displaySize} | ${flight.aircraft_type}</span>
+                        </div>
                         ${flowHTML}
                         <div class="flight-card-footer">
                             <div class="days-indicator">${circlesHTML}</div>
@@ -37156,7 +37182,6 @@
             const airlines = new Set(), types = new Set(), sizes = new Set();
             flights.forEach(f => { 
                 airlines.add(f.airline); 
-                // 智能切割机型 "A320/A321" -> 独立为 "A320" 和 "A321"
                 if(f.aircraft_type.includes('/')){
                     f.aircraft_type.split('/').forEach(t => types.add(t.trim()));
                 } else {
@@ -37177,29 +37202,34 @@
         let lastConnectedAirports = new Set();
         let globalHasActiveFilter = false;
         
-        // 核心视野动态判定：根据经纬度改变不在视野内的航线透明度
+        // 核心：基于“中心 80% 视野”动态计算透明度
         function updateRoutesVisibility() {
             if (!globalHasActiveFilter) return;
             const bounds = map.getBounds();
-            let cssRules = '';
+            const center = bounds.getCenter();
             
+            // 计算屏幕中心 80% 的虚拟边界框
+            const latSpan = bounds.getNorth() - bounds.getSouth();
+            const lngSpan = bounds.getEast() - bounds.getWest();
+            const inner80Bounds = L.latLngBounds(
+                [center.lat - latSpan * 0.4, center.lng - lngSpan * 0.4],
+                [center.lat + latSpan * 0.4, center.lng + lngSpan * 0.4]
+            );
+            
+            let cssRules = '';
             renderedRouteObjects.forEach(item => {
-                const depInView = bounds.contains(item.depCoord);
-                const arrInView = bounds.contains(item.arrCoord);
-                // 长航线且完全跨越了屏幕(出发与到达都在视野外)
+                // 判断出发和到达是否都在 80% 核心区以外
+                const depInView = inner80Bounds.contains(item.depCoord);
+                const arrInView = inner80Bounds.contains(item.arrCoord);
                 const isLongAndOut = !depInView && !arrInView;
                 
-                const outlineOp = isLongAndOut ? 0.15 : 0.8;
-                const innerOp = isLongAndOut ? 0.25 : 1.0;
-                
-                item.outline.setStyle({ opacity: outlineOp });
-                item.inner.setStyle({ opacity: innerOp });
+                // IN: 透明度乘以 1(保留渐变), OUT: 强制整体暗化至 15%
+                const targetOpacity = isLongAndOut ? 0.15 : 1; 
                 
                 // 将透明度规则直接拼接到 CSS 字符串中
-                cssRules += `.${item.routeId} { opacity: ${outlineOp} !important; }\n`;
+                cssRules += `.${item.routeId} { opacity: ${targetOpacity} !important; }\n`;
             });
             
-            // 写入动态样式表：即使Leaflet缩放时销毁并重建了箭头DOM节点，新节点也会自带这些class并完美应用最新的透明度
             document.getElementById('dynamic-route-styles').innerHTML = cssRules;
         }
         
@@ -37246,13 +37276,21 @@
                 m.airportName = name;
                 m.airportIndex = idx;
                 
+                // 移动端防抖 (Debounce)
+                m.lastClickTime = 0;
+                m.on('click', e => {
+                    L.DomEvent.stopPropagation(e);
+                    const now = Date.now();
+                    if (now - m.lastClickTime < 400) return; 
+                    m.lastClickTime = now;
+                    
+                    selectedAirport = selectedAirport === name ? null : name;
+                    document.getElementById('airport-filter').value = selectedAirport || ''; updateDisplay();
+                });
+
                 m.on('mouseover', () => { document.getElementById(`apt-marker-${idx}`).classList.remove('collapsed'); }); 
                 m.on('mouseout', () => { updateAirportLabels(); });
                 
-                m.on('click', e => {
-                    e.originalEvent.stopPropagation(); selectedAirport = selectedAirport === name ? null : name;
-                    document.getElementById('airport-filter').value = selectedAirport || ''; updateDisplay();
-                });
                 airportMarkers.push(m);
             });
         }
@@ -37282,7 +37320,6 @@
             if (filters.timePeriod === 'evening' && f.is_morning) return false;
             if (filters.aircraftSize && f.aircraft_size !== filters.aircraftSize) return false;
             
-            // 机型模糊包含匹配：解决选择 "A320" 能够匹配到航班库里的 "A320/A321" 字段
             if (filters.aircraftType) {
                 const types = f.aircraft_type.split('/').map(t => t.trim());
                 if (!types.includes(filters.aircraftType)) return false;
@@ -37323,9 +37360,7 @@
             selectedAirport = document.getElementById('airport-filter').value || null;
             const filters = getCurrentFilters();
             
-            // 严苛逻辑：只要机场没被选中，即便选择了其他条件，也全局禁用地图连线显示
             globalHasActiveFilter = (filters.airport !== '');
-
             lastConnectedAirports.clear();
             
             if (globalHasActiveFilter) {
@@ -37340,41 +37375,70 @@
                     const routeUID = `rt-id-${Math.random().toString(36).substr(2, 9)}`;
                     
                     const hitboxLine = L.polyline(pts, { weight: 30, opacity: 0, className: 'route-hitbox' }).addTo(map);
+                    routeLayers.push(hitboxLine);
                     
-                    // 外层5px，内层3px。相互覆盖后，正好呈现出上下各有 1px 的精细彩色描边
-                    const outlineLine = L.polyline(pts, { color: rObj.color, weight: 5, opacity: 0.8, interactive: false }).addTo(map);
-                    const innerLine = L.polyline(pts, { weight: 3, className: 'route-inner', interactive: false }).addTo(map);
+                    // ==========================================
+                    // 反向流星渐变：出发地最不可见（透明度0），目的地最清晰（透明度0.9）
+                    // ==========================================
+                    const numSegments = pts.length - 1;
+                    for (let i = 0; i < numSegments; i++) {
+                        const ratio = i / Math.max(1, numSegments - 1);
+                        const targetOpacity = 0.9 * Math.pow(ratio, 1.5);
+                        
+                        // 5px 描边底色（自动适应主题白/黑）
+                        const outL = L.polyline([pts[i], pts[i+1]], { 
+                            color: 'var(--route-outline-color)', weight: 5, opacity: targetOpacity, 
+                            interactive: false, lineCap: 'round', lineJoin: 'round',
+                            className: `route-anim-layer ${routeUID}` 
+                        }).addTo(map);
+                        
+                        // 3px 彩色核心
+                        const inL = L.polyline([pts[i], pts[i+1]], { 
+                            color: rObj.color, weight: 3, opacity: targetOpacity, 
+                            interactive: false, lineCap: 'round', lineJoin: 'round',
+                            className: `route-anim-layer ${routeUID}` 
+                        }).addTo(map);
+                        
+                        routeLayers.push(outL, inL);
+                    }
                     
-                    // 箭头生成机制：舍弃重复3次的百分比限制，改为按像素固定排布
-                    // offset: 25 -> 代表从第25个像素点开始画第一个箭头（短航线也保证至少有一个）
-                    // repeat: 60 -> 代表每隔 60 像素画一个箭头，距离再长间距也不变
+                    // ==========================================
+                    // 引入0.913参数的随机偏移算法，打乱箭头的排布
+                    // ==========================================
+                    const arrowOffsetRandomness = 0.913; 
+                    const randomOffset = 25 + (Math.random() * arrowOffsetRandomness * 120);
+
                     const dec = L.polylineDecorator(pts, {
-                        patterns: [{ offset: 25, repeat: 60, symbol: L.Symbol.marker({
-                            rotate: true, markerOptions: { interactive: false, icon: L.divIcon({
-                                className: `arrow-icon route-decor-arrow ${routeUID}`, iconSize: [12, 12], iconAnchor: [6, 6],
-                                // 全新的导航箭头：追加了逆时针90度旋转 (transform: rotate(-90deg)) 且去除了写死的透明度
-                                html: `<svg width="12" height="12" viewBox="0 0 12 12" style="overflow:visible; transform: rotate(-90deg);">
-                                          <path d="M4,4.5 L7.5,6 L4,7.5" stroke="${rObj.color}" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                                       </svg>`
-                            })}
+                        patterns: [{ offset: randomOffset, repeat: 120, symbol: L.Symbol.arrowHead({
+                            pixelSize: 4, headAngle: 75, polygon: false, 
+                            pathOptions: { 
+                                color: 'var(--route-arrow-color)', 
+                                weight: 1, 
+                                className: `route-anim-layer ${routeUID}`, 
+                                interactive: false 
+                            }
                         })}]
                     }).addTo(map);
+                    routeLayers.push(dec);
+                    
+                    const arrowLayers = dec.getLayers();
+                    const totalArrows = arrowLayers.length;
+                    arrowLayers.forEach((arrow, idx) => {
+                        const ratio = totalArrows > 1 ? (idx / (totalArrows - 1)) : 1.0; 
+                        const arrowOp = 0.9 * Math.pow(ratio, 1.5);
+                        arrow.setStyle({ opacity: arrowOp });
+                    });
                   
                     const clk = e => {
                         L.DomEvent.stopPropagation(e); activeRouteKey = rObj.route_key; 
                         const panelFlights = rObj.mapped_flights.filter(i => isMappedFlightVisible(i, filters, false));
                         showInfoPanel(rObj.route_key, rObj.departure, rObj.arrival, panelFlights);
                     };
-                    
                     hitboxLine.on('click', clk); 
-                    routeLayers.push(hitboxLine, outlineLine, innerLine, dec);
                     
-                    // 压入全局管理数组，供透明度动态管理功能调度
                     renderedRouteObjects.push({
                         depCoord: rObj.departure_coord,
                         arrCoord: rObj.arrival_coord,
-                        outline: outlineLine,
-                        inner: innerLine,
                         routeId: routeUID
                     });
                 });
@@ -37382,7 +37446,6 @@
             
             updateAirportLabels();
             
-            // 每次渲染完立马执行一次视野透明度判定，生成对应的CSS拦截器
             if(globalHasActiveFilter) {
                 updateRoutesVisibility();
             }
