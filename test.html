@@ -7,43 +7,51 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         :root {
+            /* 主题色系 */
             --primary-color: #8E6289;
-            --primary-hover: #E77B73;
+            --primary-glow: rgba(142, 98, 137, 0.6);
             --background-primary: #ffffff;
-            --background-secondary: rgba(250, 240, 242, 0.4);
+            --background-secondary: rgba(250, 240, 242, 0.65);
             --text-primary: #0F0508;
             --text-secondary: #8e8e93;
-            --border-color: rgba(141, 125, 129, 0.2);
-            --border-color-dark: rgba(141, 125, 129, 0.35);
+            --border-color: rgba(141, 125, 129, 0.25);
+            --border-color-dark: rgba(141, 125, 129, 0.4);
             --shadow-light: rgba(0, 0, 0, 0.08);
             --shadow-medium: rgba(0, 0, 0, 0.15);
-            --backdrop-filter: blur(20px);
+            --backdrop-filter: blur(24px);
             
             /* 航线专用动态颜色 */
-            --route-arrow-color: #555555; /* 明亮模式下的深灰箭头 */
-            --route-outline-color: #ffffff; /* 明亮模式下的白色描边 */
+            --route-arrow-color: #555555; 
+            --route-outline-color: #ffffff; 
+            
+            /* 全局统一宽度体系 */
+            --ui-width: 600px;
+        }
+        
+        @media (max-width: 768px) {
+            :root {
+                --ui-width: calc(100vw - 20px);
+            }
         }
         
         @media (prefers-color-scheme: dark) {
             :root {
                 --background-primary: #000000;
-                --background-secondary: rgba(15, 5, 8, 0.4);
+                --background-secondary: rgba(20, 15, 18, 0.65);
                 --text-primary: #ffffff;
                 --text-secondary: #aaaaaa;
-                --border-color: rgba(141, 125, 129, 0.3);
+                --border-color: rgba(141, 125, 129, 0.35);
                 --border-color-dark: rgba(141, 125, 129, 0.5);
                 --shadow-light: rgba(0, 0, 0, 0.3);
                 --shadow-medium: rgba(0, 0, 0, 0.5);
-                
-                /* 暗黑模式适配 */
-                --route-arrow-color: #ffffff; /* 暗黑模式下的纯白箭头 */
-                --route-outline-color: #000000; /* 暗黑模式下的黑色描边 */
+                --route-arrow-color: #ffffff; 
+                --route-outline-color: #000000; 
+                --primary-glow: rgba(180, 130, 175, 0.7);
             }
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        /* 强制全局系统 UI 字体 */
         html, body {
             margin: 0; padding: 0; height: 100%;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -53,1207 +61,1259 @@
         #map { height: 100vh; width: 100vw; background-color: var(--background-primary); }
         .leaflet-control-zoom { display: none !important; }
         
-        /* 胶囊机场按钮：彻底重构为 GPU 缩放动画，消灭圆角方块 */
+        /* 胶囊机场按钮 */
         .airport-marker {
             position: absolute; left: 0; top: 0; 
             display: flex; align-items: center; justify-content: center;
             background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            border: 1px solid var(--border-color-dark);
-            border-radius: 20px; 
-            padding: 0 10px;
-            height: 22px; line-height: 20px;
-            min-width: 22px; max-width: 150px;
+            border: 1px solid var(--border-color-dark); border-radius: 20px; padding: 0 10px;
+            height: 22px; line-height: 20px; min-width: 22px; max-width: 150px;
             color: var(--text-primary); font-size: 11px; font-weight: 700; cursor: pointer;
-            white-space: nowrap; overflow: hidden;
-            box-shadow: 0 4px 12px var(--shadow-light);
-            text-shadow: 0 0 2px var(--background-secondary);
+            white-space: nowrap; overflow: hidden; box-shadow: 0 4px 12px var(--shadow-light);
             user-select: none; -webkit-user-select: none;
-            
-            transform-origin: center center;
-            transform: translate(-50%, -50%) scale(1);
+            transform-origin: center center; transform: translate(-50%, -50%) scale(1);
             transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, color 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .airport-marker.collapsed { max-width: 22px !important; padding: 0 !important; color: transparent; border-width: 2px; transform: translate(-50%, -50%) scale(0.65); }
+        .airport-marker:not(.collapsed):hover { transform: translate(-50%, -50%) scale(1.05); z-index: 1000 !important; }
+        .airport-marker.selected { background: var(--text-primary); color: var(--background-primary); border-color: transparent; z-index: 1000 !important; transform: translate(-50%, -50%) scale(1.1); }
+
+        /* ================= 核心重构：颗粒化发光交互 UI ================= */
         
-        .airport-marker.collapsed {
-            max-width: 22px !important;
-            padding: 0 !important;
-            color: transparent;
-            border-width: 2px;
-            transform: translate(-50%, -50%) scale(0.65);
+        /* 通用毛玻璃质感基础 */
+        .glass-element {
+            background: var(--background-secondary);
+            backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
+            box-shadow: 0 4px 16px var(--shadow-light);
         }
         
-        .airport-marker:hover { opacity: 0.95; z-index: 1000 !important; }
-        .airport-marker:not(.collapsed):hover { transform: translate(-50%, -50%) scale(1.05); }
+        #ui-container { position: absolute; z-index: 1002; display: flex; flex-direction: column; width: var(--ui-width); pointer-events: none; }
+        #ui-container > * { pointer-events: auto; }
         
-        .airport-marker.selected {
-            background: var(--text-primary); color: var(--background-primary);
-            border-color: transparent; opacity: 1; text-shadow: none; z-index: 1000 !important;
-            transform: translate(-50%, -50%) scale(1.1);
-        }
+        /* 移动端上拉提示条外置 */
+        .mobile-handle-wrapper { display: none; justify-content: center; width: 100%; margin-bottom: 8px; cursor: pointer;}
+        .mobile-handle { width: 40px; height: 6px; border-radius: 3px; background: var(--border-color-dark); }
         
-        /* 筛选面板按钮与背景 */
-        .control-btn {
-            position: absolute; z-index: 1003; width: 50px; height: 50px; border-radius: 25px;
-            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            border: 1px solid var(--border-color); box-shadow: 0 8px 32px var(--shadow-medium);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.3s ease; color: var(--text-primary); font-weight: 600; font-size: 14px;
-        }
-        .control-btn:hover { transform: scale(1.05); }
-        .control-btn:active { transform: scale(0.95); }
-        .filter-toggle-btn { top: 40px; left: 40px; }
-        .filter-toggle-btn.panel-open { background: var(--border-color-dark); }
+        /* 常亮区：拆分为独立颗粒 */
+        .persistent-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
         
-        .panel-btn {
-            width: 50px; height: 50px; border-radius: 25px; background: var(--border-color);
-            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s ease; color: var(--text-primary); font-weight: 600; font-size: 14px;
+        /* 核心发光逻辑：未选中无边框0饱和，选中后荧光边框 */
+        .glow-btn {
+            border: 1px solid transparent; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+            filter: grayscale(100%) opacity(0.4); color: var(--text-primary);
         }
-        .panel-btn[data-action="reset"] { background: #E77B73 !important; color: white !important; }
-               
-        .panel-backdrop {
-            position: absolute; top: 20px; left: 20px; z-index: 1001; width: 360px; height: 360px;
-            border-radius: 37px; background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            border: 1px solid var(--border-color); box-shadow: 0 8px 32px var(--shadow-medium);
-            opacity: 0; transform: scale(0); transform-origin: 30px 30px; transition: all 0.3s ease; pointer-events: none;
-        }
-        .panel-backdrop.visible { opacity: 1; transform: scale(1); }
-        
-        .control-panel {
-            position: absolute; top: 20px; left: 20px; z-index: 1002; background: transparent;
-            width: 360px; height: 370px; display: flex; flex-direction: column; transition: all 0.3s ease; pointer-events: none;
-        }
-        .control-panel-content {
-            opacity: 0; transform: translateY(10px); transition: all 0.3s ease 0.1s; pointer-events: none;
-            height: 100%; overflow-y: visible; display: flex; flex-direction: column; gap: 12px; padding: 20px;
-        }
-        .control-panel.visible .control-panel-content { opacity: 1; transform: translateY(0); pointer-events: all; }
-        
-        .button-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
-        .filter-section { display: flex; flex-direction: column; gap: 12px; flex: 1; }
-        .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
-        .filter-row.single { grid-template-columns: 1fr; }
-        .control-group { display: flex; flex-direction: column; gap: 0; }
-        
-        select {
-            padding: 8px 12px; border: none; border-radius: 19px; background-color: var(--background-primary);
-            color: var(--text-primary); font-size: 14px; -webkit-appearance: none; appearance: none;
-            min-height: 36px; width: 100%; outline: none; border: 1px solid var(--border-color);
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; padding-right: 36px;
-        }
-        @media (prefers-color-scheme: dark) {
-            select { background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e"); }
+        .glow-btn.active {
+            filter: none; color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px var(--primary-glow), inset 0 0 5px rgba(142, 98, 137, 0.15);
         }
         
-        .checkbox-group { display: flex; gap: 2px; margin-top: 3px; width: 100%; justify-content: space-between; }
-        .checkbox-item {
-            display: flex; align-items: center; justify-content: center; padding: 10px 2px; border-radius: 22px;
-            background: var(--border-color); color: var(--text-secondary); font-size: 14px; font-weight: 600;
-            cursor: pointer; transition: all 0.2s ease; user-select: none; flex: 1;
-        }
-        .checkbox-item.checked { background: var(--primary-color); color: white; }
-        .checkbox-item input { display: none; }
+        .icon-btn { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         
-        /* 双向时间轴 */
-        .date-slider-container { margin-top: 6px; padding: 0 4px; }
+        /* 中央机场选择框（同样遵循发光逻辑） */
+        .airport-input-btn {
+            flex: 1; height: 40px; border-radius: 20px; border: 1px solid transparent;
+            color: var(--text-primary); font-size: 14px; font-weight: 700; 
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px;
+        }
+        .airport-input-btn.has-val {
+            border-color: var(--primary-color); color: var(--primary-color); 
+            box-shadow: 0 0 10px var(--primary-glow), inset 0 0 5px rgba(142, 98, 137, 0.15);
+        }
+        
+        /* A-Z 机场与机型全宽下拉弹窗 */
+        .custom-dropdown {
+            position: absolute; left: 0; width: var(--ui-width); z-index: 10000;
+            border-radius: 24px; padding: 16px; display: none; flex-direction: column; gap: 12px;
+            max-height: 50vh; overflow-y: auto; overflow-x: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .custom-dropdown.show { display: flex; animation: fadePop 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes fadePop { from{opacity:0; transform:scale(0.98) translateY(10px);} to{opacity:1; transform:scale(1) translateY(0);} }
+        
+        .apt-group { display: flex; flex-direction: column; gap: 6px; }
+        .apt-letter { font-size: 12px; font-weight: 900; color: var(--primary-color); padding-left: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 2px;}
+        .apt-items { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .apt-item-btn { padding: 8px 2px; border-radius: 12px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s; white-space: nowrap; overflow: hidden; }
+        .apt-item-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        
+        /* 抽屉容器逻辑：开启时才赋予外间距分离 */
+        .drawers-wrapper { position: relative; z-index: 5; max-height: 0; overflow: hidden; opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; gap: 10px; }
+        
+        .drawer { border-radius: 24px; padding: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 16px; }
+        
+        /* 抽屉1：日期与星期 */
+        .days-container { display: flex; justify-content: space-between; gap: 6px; }
+        .day-btn { flex: 1; height: 36px; border-radius: 18px; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+        
+        /* 抽屉2：航司与机型胶囊 (2行完美布局) */
+        .airlines-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: center; justify-items: center; grid-auto-flow: row dense; }
+        .airline-btn { width: 38px; height: 38px; border-radius: 19px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; background: var(--background-primary); }
+        .airline-btn img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .aircraft-wrapper { grid-area: 2 / 3 / 3 / 6; width: 100%; }
+        .aircraft-capsule-btn { width: 100%; height: 38px; border-radius: 19px; background: var(--background-primary); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;}
+        
+        /* 机型多选面板 */
+        .ac-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;}
+        .ac-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+        .ac-select-all { color: var(--primary-color); cursor: pointer; padding: 2px 6px; border-radius: 10px; transition: 0.2s; background: transparent; border: 1px solid var(--border-color);}
+        .ac-select-all:hover { border-color: var(--primary-color); }
+        .ac-items { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ac-type-btn { padding: 6px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; }
+
+        /* 响应式核心定位与间隙衍生 */
+        @media (min-width: 769px) {
+            #ui-container { top: 20px; left: 20px; flex-direction: column; }
+            .hover-trigger-zone { position: absolute; top: -20px; left: 0; width: 100%; height: 60px; z-index: 20; cursor: pointer; }
+            
+            #ui-container.drawers-open .drawers-wrapper { max-height: 800px; opacity: 1; overflow: visible; margin-top: 12px; }
+            
+            /* PC端下拉弹窗定位在悬浮栏正下方 */
+            .custom-dropdown { top: 52px; }
+            
+            #info-panel { bottom: 20px; top: auto; left: 20px; }
+        }
+        @media (max-width: 768px) {
+            #ui-container { bottom: 20px; left: 10px; right: 10px; flex-direction: column-reverse; margin: 0 auto;}
+            .mobile-handle-wrapper { display: flex; }
+            
+            #ui-container.drawers-open .drawers-wrapper { max-height: 800px; opacity: 1; overflow: visible; margin-bottom: 12px; }
+            
+            /* 移动端下拉弹窗定位在悬浮栏正上方 */
+            .custom-dropdown { bottom: 52px; }
+            
+            #info-panel { top: 15px; bottom: auto; left: 10px; }
+            
+            .airline-btn { width: 36px; height: 36px; }
+        }
+
+        /* 遗留时间轴滑块 */
+        .date-slider-container { padding: 0 4px; }
         .date-slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--primary-color); font-weight: 600; margin-bottom: 6px; }
-        .multi-range { position: relative; height: 28px; background: var(--border-color); border-radius: 14px; margin-bottom: 5px; }
-        .slider-range { position: absolute; top: 0; height: 100%; background: var(--primary-color); opacity: 0.35; border-radius: 14px; z-index: 1; pointer-events: none; }
+        .multi-range { position: relative; height: 20px; background: var(--border-color); border-radius: 10px; margin-bottom: 5px; }
+        .slider-range { position: absolute; top: 0; height: 100%; background: var(--primary-color); opacity: 0.35; border-radius: 10px; pointer-events: none; }
         .multi-range input[type=range] { position: absolute; left: 0; top: 0; width: 100%; height: 100%; appearance: none; -webkit-appearance: none; background: none; z-index: 4; outline: none; margin: 0; pointer-events: none; }
-        .multi-range input[type=range]::-webkit-slider-thumb { pointer-events: auto; appearance: none; -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--background-primary); border: 3px solid var(--primary-color); cursor: pointer; box-shadow: 0 2px 6px var(--shadow-medium); }
+        .multi-range input[type=range]::-webkit-slider-thumb { pointer-events: auto; appearance: none; -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--background-primary); border: 2px solid var(--primary-color); cursor: pointer; box-shadow: 0 2px 6px var(--shadow-medium); }
         .date-ticks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; border-radius: 14px; }
-        .date-tick { position: absolute; font-size: 11px; color: var(--text-primary); font-weight: 600; transform: translateX(-50%); line-height: 28px; white-space: nowrap; opacity: 0.8; text-shadow: 0 0 3px var(--background-primary), 0 0 5px var(--background-primary); }
+        .date-tick { position: absolute; font-size: 10px; color: var(--text-primary); font-weight: 600; transform: translateX(-50%); line-height: 20px; white-space: nowrap; opacity: 0.8; }
         
-        /* 图例更新：适配新线宽 (5px / 3px) */
-        .top-right-legend {
-            position: fixed; top: 20px; right: 20px; z-index: 1000;
-            display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
-            pointer-events: none;
-        }
-        .legend-row {
-            display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900;
-            color: var(--text-primary); 
-            text-shadow: 0 1px 3px var(--background-secondary);
-        }
-        .legend-line {
-            width: 26px; height: 5px; background: var(--route-outline-color);
-            position: relative; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3); border-radius: 2.5px;
-        }
-        .legend-line-inner {
-            width: 100%; height: 3px; background: var(--legend-color); border-radius: 1.5px;
-        }
-        .legend-line::after {
-            content: ''; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%) rotate(45deg);
-            width: 5px; height: 5px;
-            border-top: 1.5px solid var(--route-arrow-color);
-            border-right: 1.5px solid var(--route-arrow-color);
-        }
+        /* 图例 */
+        .top-right-legend { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
+        .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; color: var(--text-primary); text-shadow: 0 1px 3px var(--background-secondary); }
+        .legend-line { width: 26px; height: 5px; background: var(--route-outline-color); position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border-radius: 2.5px; }
+        .legend-line-inner { width: 100%; height: 3px; background: var(--legend-color); border-radius: 1.5px; }
+        .legend-line::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 5px; height: 5px; border-top: 1.5px solid var(--route-arrow-color); border-right: 1.5px solid var(--route-arrow-color); }
 
-        /* 左置免责声明 & 版权 */
-        .leaflet-control-attribution {
-            background: var(--background-secondary) !important;
-            backdrop-filter: var(--backdrop-filter) !important; -webkit-backdrop-filter: var(--backdrop-filter) !important;
-            border-radius: 10px 0 0 0 !important; color: var(--text-secondary) !important; 
-            font-size: 10px !important; border-top: 1px solid var(--border-color); border-left: 1px solid var(--border-color);
-            padding: 4px 10px !important; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
-            line-height: 1.4;
-        }
-        .leaflet-control-attribution a { color: var(--primary-color) !important; text-decoration: none; }
+        .leaflet-control-attribution { background: var(--background-secondary) !important; backdrop-filter: var(--backdrop-filter) !important; -webkit-backdrop-filter: var(--backdrop-filter) !important; border-radius: 10px 0 0 0 !important; color: var(--text-secondary) !important; font-size: 10px !important; border-top: 1px solid var(--border-color); border-left: 1px solid var(--border-color); padding: 4px 10px !important; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; line-height: 1.4; }
+        .leaflet-control-attribution a { color: var(--primary-color) !important; text-decoration: none; font-weight: bold;}
         
-        .inline-disclaimer-wrapper { 
-            position: relative; cursor: help; color: var(--text-primary); font-weight: 700; 
-            margin-right: 6px; padding-right: 8px; border-right: 1px solid var(--border-color-dark);
-        }
-        
-        .inline-disclaimer-popup {
-            position: fixed; bottom: 35px; right: 15px; width: 240px; z-index: 10000;
-            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            border: 1px solid var(--border-color); border-radius: 16px; padding: 12px 14px;
-            font-size: 11px; font-weight: normal; color: var(--text-primary); line-height: 1.5;
-            box-shadow: 0 4px 16px var(--shadow-medium); opacity: 0; pointer-events: none;
-            transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; transform: translateY(4px); text-align: left;
-        }
-        .inline-disclaimer-wrapper:hover .inline-disclaimer-popup, 
-        .inline-disclaimer-popup:hover { 
-            opacity: 1; transform: translateY(0); pointer-events: auto; transition-delay: 0s;
-        }
+        .inline-disclaimer-wrapper { position: relative; cursor: help; color: var(--text-primary); font-weight: 700; margin-right: 6px; padding-right: 8px; border-right: 1px solid var(--border-color-dark); }
+        .inline-disclaimer-popup { position: fixed; bottom: 35px; right: 15px; width: 240px; z-index: 10000; background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px 14px; font-size: 11px; font-weight: normal; color: var(--text-primary); line-height: 1.5; box-shadow: 0 4px 16px var(--shadow-medium); opacity: 0; pointer-events: none; transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; transform: translateY(4px); text-align: left; }
+        .inline-disclaimer-wrapper:hover .inline-disclaimer-popup, .inline-disclaimer-popup:hover { opacity: 1; transform: translateY(0); pointer-events: auto; transition-delay: 0s; }
 
-        /* 沉浸式卡片面板 */
-        #info-panel {
-            position: absolute; bottom: 20px; left: 20px; z-index: 1010;
-            width: 380px; max-height: 66vh; display: none; flex-direction: column;
-            background: transparent; border: none; box-shadow: none; 
-            backdrop-filter: none; -webkit-backdrop-filter: none; padding: 0;
-            transform: translateX(-120%); opacity: 0; transition: all 0.3s ease;
-            pointer-events: none; 
-        }
-        #info-panel.visible { transform: translateX(0); opacity: 1; pointer-events: none; }
+        /* ================= 航班信息框：重置为系统宽度并实现 2 栏排版 ================= */
+        #info-panel { position: absolute; z-index: 1010; width: var(--ui-width); max-height: 55vh; display: none; flex-direction: column; background: transparent; pointer-events: none; }
+        #info-panel.visible { display: flex; opacity: 1; }
         
-        .route-info-header { margin-bottom: 16px; padding: 0 8px; }
-        .route-info-header h4 { 
-            margin: 0; font-size: 22px; font-weight: 900; color: var(--text-primary); 
-            text-shadow: 0 2px 10px var(--background-primary), 0 0 5px var(--background-primary);
-        }
-        @media (prefers-color-scheme: dark) {
-            .route-info-header h4 { text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.8); }
-        }
+        .route-info-header { margin-bottom: 12px; padding: 0 4px; }
+        .route-info-header h4 { margin: 0; font-size: 20px; font-weight: 900; color: var(--text-primary); text-shadow: 0 2px 10px var(--background-primary), 0 0 5px var(--background-primary); }
+        @media (prefers-color-scheme: dark) { .route-info-header h4 { text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.8); } }
         
+        /* 一行两个卡片布局核心 */
         .flights-container { 
-            overflow-y: auto; padding-right: 5px; flex: 1; overflow-x: hidden; 
-            padding-bottom: 10px; pointer-events: auto; 
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; 
+            overflow-y: auto; padding-right: 2px; padding-bottom: 10px; pointer-events: auto; align-items: start;
         }
         .flights-container::-webkit-scrollbar { width: 4px; }
         .flights-container::-webkit-scrollbar-thumb { background: var(--border-color-dark); border-radius: 2px; }
         
-        .flight-card {
-            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            border: 1px solid var(--border-color); border-radius: 24px; padding: 16px; margin-bottom: 12px;
-            box-shadow: 0 8px 24px var(--shadow-medium); position: relative; overflow: hidden;
-            z-index: 1; 
-        }
+        .flight-card { background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); border: 1px solid var(--border-color); border-radius: 20px; padding: 12px; box-shadow: 0 6px 16px var(--shadow-medium); position: relative; overflow: hidden; z-index: 1; }
+        .card-bg-logo { position: absolute; left: -5%; top: 50%; transform: translateY(-50%); height: 105%; max-width: 40%; object-fit: contain; opacity: 0.15; filter: saturate(50%); pointer-events: none; z-index: -1; }
+        .card-bg-icon { position: absolute; right: -0%; top: -2.5%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 50px; opacity: 0.25; pointer-events: none; z-index: -1; line-height: 1; }
         
-        .card-bg-logo {
-            position: absolute; left: -5%; top: 50%; transform: translateY(-50%);
-            height: 105%; max-width: 40%; object-fit: contain;
-            opacity: 0.15; filter: saturate(50%); pointer-events: none; z-index: -1;
-        }
+        .flight-card-header { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; }
+        .flight-no-title { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px;}
+        .aircraft-type-tag { font-size: 9px; color: var(--text-secondary); font-weight: 600; }
         
-        .card-bg-icon {
-            position: absolute; right: -0%; top: -2.5%;
-            width: 90px; height: 90px; display: flex; align-items: center; justify-content: center;
-            font-size: 85px; opacity: 0.25; pointer-events: none; z-index: -1; line-height: 1;
-        }
-
-        .flight-card-header { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: baseline; }
-        .flight-no-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.5px;}
-        .aircraft-type-tag { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
-        
+        /* 内部流线压缩适配窄宽度 */
         .flight-flow { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; }
-        
-        .segment-station { 
-            display: flex; flex-direction: column; align-items: center; 
-            flex: 0 0 80px; 
-            position: relative; z-index: 2;
-        }
-        
-        .station-name { 
-            width: 100%; font-size: 22px; font-weight: 900; color: var(--text-primary); 
-            text-align: center; line-height: 1.1; margin-bottom: 4px; 
-            white-space: nowrap; 
-        }
-        .sub-airport { font-size: 10px; font-weight: 500; color: var(--text-secondary); display: block; margin-top: 4px; }
-        
-        .station-time-group { 
-            width: 0px; overflow: visible; white-space: nowrap; 
-            display: flex; gap: 8px; justify-content: center; align-items: baseline;
-        }
-        
-        .station-time { font-size: 18px; text-align: center; position: relative; }
+        .segment-station { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; position: relative; z-index: 2; }
+        .station-name { width: 100%; font-size: 14px; font-weight: 900; color: var(--text-primary); text-align: center; line-height: 1.1; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .sub-airport { font-size: 8px; font-weight: 500; color: var(--text-secondary); display: block; margin-top: 2px; }
+        .station-time-group { width: 0px; overflow: visible; white-space: nowrap; display: flex; gap: 4px; justify-content: center; align-items: baseline; }
+        .station-time { font-size: 12px; text-align: center; position: relative; font-weight: 800;}
         .time-predicted { color: var(--text-secondary); font-weight: 700; }
         
-        /* 补充说明 Emoji 悬浮样式 */
-        .time-note-emoji { position: absolute; font-size: 11px; cursor: help; bottom: 0px; z-index: 10; }
-        .time-note-emoji.left { right: calc(100% + 2px); }
-        .time-note-emoji.right { left: calc(100% + 2px); }
-        .time-note-emoji::after {
-            content: attr(data-tooltip);
-            position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
-            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            color: var(--text-primary); border: 1px solid var(--border-color);
-            padding: 6px 12px; border-radius: 16px; font-size: 11px; white-space: nowrap;
-            box-shadow: 0 4px 12px var(--shadow-medium); pointer-events: none; font-weight: 600;
-            opacity: 0; transition: opacity 0.2s, transform 0.2s;
-        }
+        .time-note-emoji { position: absolute; font-size: 10px; cursor: help; bottom: 0px; z-index: 10; }
+        .time-note-emoji.left { right: calc(100% + 1px); }
+        .time-note-emoji.right { left: calc(100% + 1px); }
+        .time-note-emoji::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); color: var(--text-primary); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; box-shadow: 0 4px 12px var(--shadow-medium); pointer-events: none; font-weight: 600; opacity: 0; transition: opacity 0.2s, transform 0.2s; }
         .time-note-emoji:hover::after { opacity: 1; transform: translateX(-50%) translateY(-2px); }
 
-        .segment-arrow-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; flex: 1 1 auto; margin: 0 12px; margin-top: 10px; position: relative;}
+        .segment-arrow-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; flex: 0.5; margin: 0 4px; margin-top: 8px; position: relative;}
+        .arrow-warning { font-size: 12px; color: var(--primary-hover); font-weight: 700; position: absolute; top: -14px; cursor: help; z-index: 10; }
         
-        .arrow-warning { 
-            font-size: 16px; color: var(--primary-hover); font-weight: 700; position: absolute; top: -16px; 
-            cursor: help; z-index: 10;
-        }
-        .arrow-warning:hover::after, .arrow-warning:active::after {
-            content: "不在可售时间范围";
-            position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
-            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
-            color: var(--text-primary); border: 1px solid var(--border-color);
-            padding: 6px 12px; border-radius: 16px; font-size: 11px; white-space: nowrap;
-            box-shadow: 0 4px 12px var(--shadow-medium); pointer-events: none; font-weight: 600;
-        }
-        
-        .flight-card-footer {
-            margin-top: 20px; padding-top: 10px; border-top: 1px dashed var(--border-color);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        
-        .days-indicator { display: flex; gap: 4px; }
-        .day-circle { width: 18px; height: 18px; border-radius: 9px; background: var(--border-color); color: var(--text-secondary); font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 600; border: 1px solid transparent; }
-        
-        .flight-date-range { 
-            font-size: 10px; color: var(--text-secondary); font-weight: 500; 
-            display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px 4px; max-width: 150px; text-align: right;
-        }
+        .flight-card-footer { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .days-indicator { display: flex; gap: 2px; }
+        .day-circle { width: 14px; height: 14px; border-radius: 7px; background: var(--border-color); color: var(--text-secondary); font-size: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid transparent; }
+        .flight-date-range { font-size: 8px; color: var(--text-secondary); font-weight: 600; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 1px 2px; max-width: 80px; text-align: right; }
         .date-chunk { white-space: nowrap; }
         
-        /* 航线内外线层样式 */
         .route-hitbox { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        .route-anim-layer { transition: opacity 0.3s ease; } /* CSS 视野透明度过渡 */
-        
-        @media (max-width: 768px) {
-            .panel-backdrop { width: calc(100vw - 40px); height: 420px; }
-            .control-panel { width: calc(100vw - 40px); height: 430px; }
-            #info-panel { width: 380px; max-width: calc(100vw - 40px); max-height: 56vh; padding: 0; }
-            .top-right-legend { top: 15px; right: 15px; }
-            .leaflet-control-attribution { max-width: 85vw; }
-        }
+        .route-anim-layer { transition: opacity 0.3s ease; }
     </style>
     <style id="dynamic-route-styles"></style>
 </head>
 
 <body>
     <div id="map"></div>
-    <div class="filter-toggle-btn control-btn" id="filter-toggle-btn" onclick="toggleControlPanel()">筛选</div>
-    <div class="panel-backdrop" id="panel-backdrop"></div>
     
-    <div class="top-right-legend">
-        <div class="legend-row">
-            <div class="legend-line" style="--legend-color: #FF8C61;"><div class="legend-line-inner"></div></div>早班
-        </div>
-        <div class="legend-row">
-            <div class="legend-line" style="--legend-color: #CE6A85;"><div class="legend-line-inner"></div></div>早晚班
-        </div>
-        <div class="legend-row">
-            <div class="legend-line" style="--legend-color: #4E598C;"><div class="legend-line-inner"></div></div>晚班
-        </div>
-    </div>
-    
-    <div class="control-panel" id="control-panel">
-        <div class="control-panel-content" id="control-panel-content">
-            <div class="button-row">
-                <div style="flex: 1;"></div>
-                <button class="panel-btn" data-action="reset" onclick="resetFilters()">重置</button>
+    <div id="ui-container">
+        <div class="hover-trigger-zone" id="desktop-trigger"></div>
+        
+        <div id="airport-dropdown" class="custom-dropdown glass-element"></div>
+        <div id="aircraft-dropdown" class="custom-dropdown glass-element"></div>
+        
+        <div class="drawers-wrapper">
+            <div class="drawer glass-element">
+                <div class="date-slider-container">
+                    <div class="date-slider-labels"><span id="date-label-start"></span><span id="date-label-end"></span></div>
+                    <div class="multi-range">
+                        <input type="range" id="date-range-min" value="0" step="1"><input type="range" id="date-range-max" value="100" step="1">
+                        <div class="slider-range" id="slider-range-fill"></div><div class="date-ticks" id="date-ticks"></div>
+                    </div>
+                </div>
+                <div class="days-container">
+                    <button class="day-btn glow-btn active" data-val="1">一</button><button class="day-btn glow-btn active" data-val="2">二</button>
+                    <button class="day-btn glow-btn active" data-val="3">三</button><button class="day-btn glow-btn active" data-val="4">四</button>
+                    <button class="day-btn glow-btn active" data-val="5">五</button><button class="day-btn glow-btn active" data-val="6">六</button>
+                    <button class="day-btn glow-btn active" data-val="7">日</button>
+                </div>
             </div>
             
-            <div class="filter-section">              
-                <div class="filter-row">
-                    <div class="control-group"><select id="airline-filter"><option value="">所有航司</option></select></div>
-                    <div class="control-group"><select id="time-period-filter"><option value="">全时段</option><option value="morning">仅早班</option><option value="evening">仅晚班</option></select></div>
-                </div>
-                <div class="filter-row">
-                    <div class="control-group"><select id="airport-filter"><option value="">所有机场</option></select></div>
-                    <div class="control-group"><select id="airport-direction"><option value="">到达+出发</option><option value="departure">仅出发</option><option value="arrival">仅到达</option></select></div>
-                </div>
-                <div class="filter-row">
-                    <div class="control-group"><select id="aircraft-type-filter"><option value="">所有机型</option></select></div>
-                    <div class="control-group"><select id="aircraft-size-filter"><option value="">所有尺寸</option></select></div>
-                </div>
-                
-                <div class="filter-row single">
-                    <div class="control-group">
-                        <div class="checkbox-group" style="margin-top: 4px;">
-                            <div class="checkbox-item checked" onclick="toggleDay(1)"><input type="checkbox" id="day1" checked>一</div>
-                            <div class="checkbox-item checked" onclick="toggleDay(2)"><input type="checkbox" id="day2" checked>二</div>
-                            <div class="checkbox-item checked" onclick="toggleDay(3)"><input type="checkbox" id="day3" checked>三</div>
-                            <div class="checkbox-item checked" onclick="toggleDay(4)"><input type="checkbox" id="day4" checked>四</div>
-                            <div class="checkbox-item checked" onclick="toggleDay(5)"><input type="checkbox" id="day5" checked>五</div>
-                            <div class="checkbox-item checked" onclick="toggleDay(6)"><input type="checkbox" id="day6" checked>六</div>
-                            <div class="checkbox-item checked" onclick="toggleDay(7)"><input type="checkbox" id="day7" checked>日</div>
-                        </div>
+            <div class="drawer glass-element">
+                <div class="airlines-grid" id="airlines-grid">
+                    <div class="aircraft-wrapper">
+                        <button id="aircraft-toggle-btn" class="aircraft-capsule-btn glow-btn active">机型选择 ✈️</button>
                     </div>
                 </div>
-
-                <div class="filter-row single">
-                    <div class="control-group date-slider-container">
-                        <div class="date-slider-labels">
-                            <span id="date-label-start"></span>
-                            <span id="date-label-end"></span>
-                        </div>
-                        <div class="multi-range">
-                            <input type="range" id="date-range-min" value="0" step="1">
-                            <input type="range" id="date-range-max" value="100" step="1">
-                            <div class="slider-range" id="slider-range-fill"></div>
-                            <div class="date-ticks" id="date-ticks"></div>
-                        </div>
-                    </div>
-                </div>
-                
             </div>
+        </div>
+        
+        <div class="mobile-handle-wrapper" id="mobile-trigger">
+            <div class="mobile-handle"></div>
+        </div>
+        
+        <div class="persistent-controls">
+            <button class="icon-btn glass-element glow-btn active toggle-time" data-val="morning" title="早班">☀️</button>
+            <button class="icon-btn glass-element glow-btn active toggle-time" data-val="evening" title="晚班">🌙</button>
+            
+            <div class="airport-input-btn glass-element glow-btn" id="airport-input-btn">选择机场...</div>
+            
+            <button class="icon-btn glass-element glow-btn active toggle-dir" data-val="departure" title="起飞">🛫</button>
+            <button class="icon-btn glass-element glow-btn active toggle-dir" data-val="arrival" title="降落">🛬</button>
         </div>
     </div>
     
-    <div id="info-panel">
-        <div class="route-info-header"><h4 id="panel-route-title"></h4></div>
-        <div class="flights-container" id="info-content"></div>
+    <div class="top-right-legend">
+        <div class="legend-row"><div class="legend-line" style="--legend-color: #FF8C61;"><div class="legend-line-inner"></div></div>早班</div>
+        <div class="legend-row"><div class="legend-line" style="--legend-color: #CE6A85;"><div class="legend-line-inner"></div></div>早晚班</div>
+        <div class="legend-row"><div class="legend-line" style="--legend-color: #4E598C;"><div class="legend-line-inner"></div></div>晚班</div>
     </div>
+    
+    <div id="info-panel"><div class="route-info-header"><h4 id="panel-route-title"></h4></div><div class="flights-container" id="info-content"></div></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
     
     <script>
-        // ================= 数据注入区 =================
         const airports = [
     [
         "上海/浦东",
         31.143333,
-        121.805278
+        121.805278,
+        "S"
     ],
     [
         "广州/白云",
         23.3924361,
-        113.2987861
+        113.2987861,
+        "G"
     ],
     [
         "北京/首都",
         40.08,
-        116.5844444
+        116.5844444,
+        "B"
     ],
     [
         "深圳/宝安",
         22.6394444,
-        113.8108333
+        113.8108333,
+        "S"
     ],
     [
         "成都/天府",
         30.319,
-        104.445
+        104.445,
+        "C"
     ],
     [
         "北京/大兴",
         39.511944,
-        116.410556
+        116.410556,
+        "B"
     ],
     [
         "杭州/萧山",
         30.2294444,
-        120.4344444
+        120.4344444,
+        "H"
     ],
     [
         "上海/虹桥",
         31.198056,
-        121.336389
+        121.336389,
+        "S"
     ],
     [
         "重庆/江北",
         29.7191667,
-        106.6416667
+        106.6416667,
+        "C"
     ],
     [
         "昆明/长水",
         25.1019444,
-        102.9291667
+        102.9291667,
+        "K"
     ],
     [
         "西安/咸阳",
         34.4469444,
-        108.7513889
+        108.7513889,
+        "X"
     ],
     [
         "南京/禄口",
         31.7422222,
-        118.8619444
+        118.8619444,
+        "N"
     ],
     [
         "武汉/天河",
         30.7836111,
-        114.2080556
+        114.2080556,
+        "W"
     ],
     [
         "长沙/黄花",
         28.1966667,
-        113.2208333
+        113.2208333,
+        "C"
     ],
     [
         "厦门/高崎",
         24.5441667,
-        118.1277778
+        118.1277778,
+        "X"
     ],
     [
         "郑州/新郑",
         34.5197222,
-        113.8408333
+        113.8408333,
+        "Z"
     ],
     [
         "乌鲁木齐/天山",
         43.9072222,
-        87.4741667
+        87.4741667,
+        "W"
     ],
     [
         "青岛/胶东",
         36.2661111,
-        120.3744444
+        120.3744444,
+        "Q"
     ],
     [
         "海口/美兰",
         19.9347222,
-        110.4588889
+        110.4588889,
+        "H"
     ],
     [
         "沈阳/桃仙",
         41.64,
-        123.4836111
+        123.4836111,
+        "S"
     ],
     [
         "哈尔滨/太平",
         45.6234028,
-        126.2503278
+        126.2503278,
+        "H"
     ],
     [
         "贵阳/龙洞堡",
         26.5386111,
-        106.8008333
+        106.8008333,
+        "G"
     ],
     [
         "三亚/凤凰",
         18.3028972,
-        109.4122722
+        109.4122722,
+        "S"
     ],
     [
         "济南/遥墙",
         36.8572222,
-        117.2161111
+        117.2161111,
+        "J"
     ],
     [
         "天津/滨海",
         39.1244444,
-        117.3461111
+        117.3461111,
+        "T"
     ],
     [
         "大连/周水子",
         38.9655556,
-        121.5383333
+        121.5383333,
+        "D"
     ],
     [
         "长春/龙嘉",
         43.9961111,
-        125.6852778
+        125.6852778,
+        "C"
     ],
     [
         "兰州/中川",
         36.5075,
-        103.6194444
+        103.6194444,
+        "L"
     ],
     [
         "宁波/栎社",
         29.8266667,
-        121.4619444
+        121.4619444,
+        "N"
     ],
     [
         "福州/长乐",
         25.935,
-        119.6633333
+        119.6633333,
+        "F"
     ],
     [
         "太原/武宿",
         37.7469444,
-        112.6283333
+        112.6283333,
+        "T"
     ],
     [
         "南宁/吴圩",
         22.6082667,
-        108.1724417
+        108.1724417,
+        "N"
     ],
     [
         "珠海/金湾",
         22.0105,
-        113.3749
+        113.3749,
+        "Z"
     ],
     [
         "温州/龙湾",
         27.9119444,
-        120.8519444
+        120.8519444,
+        "W"
     ],
     [
         "呼和浩特/白塔",
         40.8514222,
-        111.8241028
+        111.8241028,
+        "H"
     ],
     [
         "合肥/新桥",
         31.9894,
-        116.9641
+        116.9641,
+        "H"
     ],
     [
         "石家庄/正定",
         38.2808333,
-        114.6966667
+        114.6966667,
+        "S"
     ],
     [
         "南昌/昌北",
         28.865,
-        115.9
+        115.9,
+        "N"
     ],
     [
         "无锡/硕放",
         31.4944444,
-        120.4294444
+        120.4294444,
+        "W"
     ],
     [
         "揭阳/潮汕",
         23.55297,
-        116.50589
+        116.50589,
+        "J"
     ],
     [
         "银川/河东",
         38.3216667,
-        106.3925
+        106.3925,
+        "Y"
     ],
     [
         "泉州/晋江",
         24.7988889,
-        118.5894444
+        118.5894444,
+        "Q"
     ],
     [
         "丽江/三义",
         26.6791667,
-        100.2458333
+        100.2458333,
+        "L"
     ],
     [
         "烟台/蓬莱",
         37.66009,
-        120.97857
+        120.97857,
+        "Y"
     ],
     [
         "西宁/曹家堡",
         36.5275,
-        102.0427778
+        102.0427778,
+        "X"
     ],
     [
         "西双版纳/嘎洒",
         21.9739139,
-        100.7596111
+        100.7596111,
+        "X"
     ],
     [
         "桂林/两江",
         25.2180556,
-        110.0391667
+        110.0391667,
+        "G"
     ],
     [
         "拉萨/贡嘎",
         29.2977778,
-        90.9119444
+        90.9119444,
+        "L"
     ],
     [
         "喀什/徕宁",
         39.5430556,
-        76.02
+        76.02,
+        "K"
     ],
     [
         "常州/奔牛",
         31.919276,
-        119.77603
+        119.77603,
+        "C"
     ],
     [
         "扬州/泰州",
         32.5616667,
-        119.715
+        119.715,
+        "Y"
     ],
     [
         "南通/兴东",
         32.0708333,
-        120.9755556
+        120.9755556,
+        "N"
     ],
     [
         "徐州/观音",
         34.0590556,
-        117.5552778
+        117.5552778,
+        "X"
     ],
     [
         "大理/凤仪",
         25.6511111,
-        100.3183333
+        100.3183333,
+        "D"
     ],
     [
         "伊犁/伊宁",
         43.9558333,
-        81.3302778
+        81.3302778,
+        "Y"
     ],
     [
         "宜昌/三峡",
         30.5564722,
-        111.4799444
+        111.4799444,
+        "Y"
     ],
     [
         "惠州/平潭",
         23.0483333,
-        114.6002778
+        114.6002778,
+        "H"
     ],
     [
         "绵阳/南郊",
         31.43,
-        104.7397222
+        104.7397222,
+        "M"
     ],
     [
         "呼伦贝尔/海拉尔",
         49.205,
-        119.825
+        119.825,
+        "H"
     ],
     [
         "湛江/吴川",
         21.2175,
-        110.3577778
+        110.3577778,
+        "Z"
     ],
     [
         "榆林/榆阳",
         38.27,
-        109.73
+        109.73,
+        "Y"
     ],
     [
         "德宏/芒市",
         24.4043889,
-        98.5330833
+        98.5330833,
+        "D"
     ],
     [
         "库尔勒/梨城",
         41.6163889,
-        86.1430556
+        86.1430556,
+        "K"
     ],
     [
         "北海/福成",
         21.5394444,
-        109.2938889
+        109.2938889,
+        "B"
     ],
     [
         "威海/大水泊",
         37.1869444,
-        122.2288889
+        122.2288889,
+        "W"
     ],
     [
         "舟山/普陀山",
         29.9341667,
-        122.3622222
+        122.3622222,
+        "Z"
     ],
     [
         "阿克苏/红旗坡",
         41.2625,
-        80.2916667
+        80.2916667,
+        "A"
     ],
     [
         "临沂/启阳",
         35.0461111,
-        118.4116667
+        118.4116667,
+        "L"
     ],
     [
         "台州/路桥",
         28.5622222,
-        121.4286111
+        121.4286111,
+        "T"
     ],
     [
         "泸州/云龙",
         29.03,
-        105.47
+        105.47,
+        "L"
     ],
     [
         "赣州/黄金",
         25.8516667,
-        114.7766667
+        114.7766667,
+        "G"
     ],
     [
         "张家界/荷花",
         29.1030556,
-        110.4433333
+        110.4433333,
+        "Z"
     ],
     [
         "盐城/南洋",
         33.4258333,
-        120.2030556
+        120.2030556,
+        "Y"
     ],
     [
         "淮安/涟水",
         33.7772222,
-        119.1477778
+        119.1477778,
+        "H"
     ],
     [
         "包头/东河",
         40.5597222,
-        109.9966667
+        109.9966667,
+        "B"
     ],
     [
         "恩施/许家坪",
         30.3202778,
-        109.485
+        109.485,
+        "E"
     ],
     [
         "和田/昆冈",
         37.0386111,
-        79.865
+        79.865,
+        "H"
     ],
     [
         "赤峰/玉龙",
         42.16556,
-        118.84361
+        118.84361,
+        "C"
     ],
     [
         "襄阳/刘集",
         32.15,
-        112.2905556
+        112.2905556,
+        "X"
     ],
     [
         "连云港/花果山",
         34.413056,
-        119.177222
+        119.177222,
+        "L"
     ],
     [
         "十堰/武当山",
         32.5916667,
-        110.9077778
+        110.9077778,
+        "S"
     ],
     [
         "济宁/大安",
         35.2927778,
-        116.3466667
+        116.3466667,
+        "J"
     ],
     [
         "兴义/万峰林",
         25.0883333,
-        104.9586111
+        104.9586111,
+        "X"
     ],
     [
         "遵义/新舟",
         27.8111,
-        107.2463
+        107.2463,
+        "Z"
     ],
     [
         "延吉/朝阳川",
         42.8827778,
-        129.4511111
+        129.4511111,
+        "Y"
     ],
     [
         "通辽",
         43.5569,
-        122.2
+        122.2,
+        "T"
     ],
     [
         "东营/胜利",
         37.5102778,
-        118.7844444
+        118.7844444,
+        "D"
     ],
     [
         "敦煌/莫高",
         40.1636111,
-        94.8002778
+        94.8002778,
+        "D"
     ],
     [
         "嘉峪关/酒泉",
         39.8596667,
-        98.3383333
+        98.3383333,
+        "J"
     ],
     [
         "荆州/沙市",
         30.3222,
-        112.279
+        112.279,
+        "J"
     ],
     [
         "遵义/茅台",
         27.967,
-        106.438
+        106.438,
+        "Z"
     ],
     [
         "柳州/白莲",
         24.2075,
-        109.3911111
+        109.3911111,
+        "L"
     ],
     [
         "锡林浩特",
         43.9167,
-        115.964
+        115.964,
+        "X"
     ],
     [
         "衡阳/南岳",
         26.7239,
-        112.618
+        112.618,
+        "H"
     ],
     [
         "达州/金垭",
         31.048,
-        107.436
+        107.436,
+        "D"
     ],
     [
         "乌兰浩特/义勒力特",
         46.1953,
-        122.008
+        122.008,
+        "W"
     ],
     [
         "哈密/伊州",
         42.8425,
-        93.6694444
+        93.6694444,
+        "H"
     ],
     [
         "南充/高坪",
         30.7938889,
-        106.1597222
+        106.1597222,
+        "N"
     ],
     [
         "南阳/姜营",
         32.9808333,
-        112.6152778
+        112.6152778,
+        "N"
     ],
     [
         "阜阳",
         32.8819444,
-        115.7344444
+        115.7344444,
+        "F"
     ],
     [
         "芜湖/宣州",
         31.1027778,
-        118.6638889
+        118.6638889,
+        "W"
     ],
     [
         "林芝/米林",
         29.3033333,
-        94.3352778
+        94.3352778,
+        "L"
     ],
     [
         "洛阳/北郊",
         34.7412778,
-        112.3878333
+        112.3878333,
+        "L"
     ],
     [
         "邯郸",
         36.5238889,
-        114.43
+        114.43,
+        "H"
     ],
     [
         "大同/云冈",
         40.0602778,
-        113.4819444
+        113.4819444,
+        "D"
     ],
     [
         "万州/五桥",
         30.7977778,
-        108.4313889
+        108.4313889,
+        "W"
     ],
     [
         "吐鲁番/交河",
         43.0303,
-        89.0972
+        89.0972,
+        "T"
     ],
     [
         "长治/王村",
         36.2475,
-        113.126
+        113.126,
+        "Z"
     ],
     [
         "琼海/博鳌",
         19.1405556,
-        110.4588889
+        110.4588889,
+        "Q"
     ],
     [
         "腾冲/驼峰",
         24.940149,
-        98.485136
+        98.485136,
+        "T"
     ],
     [
         "上饶/三清山",
         28.3802778,
-        117.9613889
+        117.9613889,
+        "S"
     ],
     [
         "日照/山字河",
         35.3997222,
-        119.3166667
+        119.3166667,
+        "R"
     ],
     [
         "乌海",
         39.7919444,
-        106.8033333
+        106.8033333,
+        "W"
     ],
     [
         "吉安/井冈山",
         26.8575,
-        114.7372222
+        114.7372222,
+        "J"
     ],
     [
         "唐山/三女河",
         39.7252778,
-        117.9933333
+        117.9933333,
+        "T"
     ],
     [
         "延安/南泥湾",
         36.4763889,
-        109.4652778
+        109.4652778,
+        "Y"
     ],
     [
         "庆阳",
         35.7997222,
-        107.6027778
+        107.6027778,
+        "Q"
     ],
     [
         "铜仁/凤凰",
         27.8833333,
-        109.3088889
+        109.3088889,
+        "T"
     ],
     [
         "广元/盘龙",
         32.39,
-        105.6933333
+        105.6933333,
+        "G"
     ],
     [
         "博乐/阿拉山口",
         44.895,
-        82.2997222
+        82.2997222,
+        "B"
     ],
     [
         "巴中/恩阳",
         30.7,
-        106.633
+        106.633,
+        "B"
     ],
     [
         "汉中/城固",
         33.1366667,
-        107.2022222
+        107.2022222,
+        "H"
     ],
     [
         "安康/富强",
         32.7080556,
-        108.9311111
+        108.9311111,
+        "A"
     ],
     [
         "宜春/明月山",
         27.8033333,
-        114.3080556
+        114.3080556,
+        "Y"
     ],
     [
         "昌都/邦达",
         30.5536111,
-        97.1086111
+        97.1086111,
+        "C"
     ],
     [
         "郴州/北湖",
         25.7505556,
-        112.8458333
+        112.8458333,
+        "C"
     ],
     [
         "鸡西/兴凯湖",
         45.2925,
-        131.1941667
+        131.1941667,
+        "J"
     ],
     [
         "迪庆/香格里拉",
         27.7933333,
-        99.6773333
+        99.6773333,
+        "D"
     ],
     [
         "怀化/芷江",
         27.4413889,
-        109.6997222
+        109.6997222,
+        "H"
     ],
     [
         "玉树/巴塘",
         32.8387,
-        97.0382
+        97.0382,
+        "Y"
     ],
     [
         "陇南/成县",
         33.788,
-        105.797
+        105.797,
+        "L"
     ],
     [
         "九江/庐山",
         29.4769444,
-        115.8011111
+        115.8011111,
+        "J"
     ],
     [
         "巴彦淖尔/天吉泰",
         40.9263889,
-        107.7388889
+        107.7388889,
+        "B"
     ],
     [
         "湘西/边城",
         28.4972,
-        109.5218
+        109.5218,
+        "X"
     ],
     [
         "满洲里/西郊",
         49.5666667,
-        117.33
+        117.33,
+        "M"
     ],
     [
         "安庆/天柱山",
         30.5822222,
-        117.0502778
+        117.0502778,
+        "A"
     ],
     [
         "中卫/沙坡头",
         37.5727778,
-        105.1544444
+        105.1544444,
+        "Z"
     ],
     [
         "二连浩特/赛乌素",
         43.4266667,
-        112.0983333
+        112.0983333,
+        "E"
     ],
     [
         "池州/九华山",
         30.7402778,
-        117.6866667
+        117.6866667,
+        "C"
     ],
     [
         "黄山/屯溪",
         29.73,
-        118.2527778
+        118.2527778,
+        "H"
     ],
     [
         "岳阳/三荷",
         29.3137,
-        113.2818
+        113.2818,
+        "Y"
     ],
     [
         "信阳/明港",
         32.5413889,
-        114.0777778
+        114.0777778,
+        "X"
     ],
     [
         "张掖/甘州",
         38.8019444,
-        100.675
+        100.675,
+        "Z"
     ],
     [
         "漠河/古莲",
         52.9211111,
-        122.4205556
+        122.4205556,
+        "M"
     ],
     [
         "玉林/福绵",
         22.4334,
-        110.1199
+        110.1199,
+        "Y"
     ],
     [
         "大兴安岭/鄂伦春",
         50.371389,
-        124.1175
+        124.1175,
+        "D"
     ],
     [
         "金昌/金川",
         38.5419,
-        102.348
+        102.348,
+        "J"
     ],
     [
         "韶关/丹霞",
         24.9786111,
-        113.4211111
+        113.4211111,
+        "S"
     ],
     [
         "阆中/古城",
         31.5020563,
-        106.0344844
+        106.0344844,
+        "L"
     ],
     [
         "于田/万方",
         36.810833,
-        81.780833
+        81.780833,
+        "Y"
     ],
     [
         "安阳/红旗渠",
         35.8708333,
-        114.4619444
+        114.4619444,
+        "A"
     ],
     [
         "永州/零陵",
         26.3455556,
-        111.6122222
+        111.6122222,
+        "Y"
     ],
     [
         "霍林郭勒/霍林河",
         45.48673,
-        119.40851
+        119.40851,
+        "H"
     ],
     [
         "攀枝花/保安营",
         26.5423139,
-        101.7985194
+        101.7985194,
+        "P"
     ],
     [
         "营口/兰旗",
         40.5408333,
-        122.3572222
+        122.3572222,
+        "Y"
     ],
     [
         "邢台/褡裢",
         36.8827778,
-        114.4291667
+        114.4291667,
+        "X"
     ],
     [
         "丽水",
         28.4680556,
-        119.9230556
+        119.9230556,
+        "L"
     ],
     [
         "梅州/梅县",
         24.2666,
-        116.1041
+        116.1041,
+        "M"
     ],
     [
         "乌兰察布/集宁",
         41.1298,
-        113.10802
+        113.10802,
+        "W"
     ],
     [
         "阿尔山/伊尔施",
         47.31,
-        119.911
+        119.911,
+        "A"
     ],
     [
         "安顺/黄果树",
         26.2605556,
-        105.8730556
+        105.8730556,
+        "A"
     ],
     [
         "赣州/瑞金",
         25.96,
-        116.0825
+        116.0825,
+        "G"
     ],
     [
         "亳州",
         33.5611,
-        115.9111
+        115.9111,
+        "B"
     ],
     [
         "凯里/黄平",
         26.9741667,
-        107.9805556
+        107.9805556,
+        "K"
     ]
 ];
         
@@ -4613,7 +4673,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -4837,7 +4897,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -7730,7 +7790,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -7819,7 +7879,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -7847,7 +7907,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -7888,7 +7948,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -7990,7 +8050,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8026,7 +8086,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -8062,7 +8122,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -8091,7 +8151,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -8120,7 +8180,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8149,7 +8209,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8468,7 +8528,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8496,7 +8556,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -8524,7 +8584,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -8553,7 +8613,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -8637,7 +8697,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -8674,7 +8734,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8703,7 +8763,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8732,7 +8792,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8826,7 +8886,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -8854,7 +8914,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -9564,7 +9624,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -9593,7 +9653,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -9917,7 +9977,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -9949,7 +10009,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -10228,7 +10288,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -10306,7 +10366,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -10954,7 +11014,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -11407,7 +11467,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -11445,7 +11505,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -11481,7 +11541,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -11509,7 +11569,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -11835,7 +11895,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -11864,7 +11924,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -12273,7 +12333,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -12378,7 +12438,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -12538,7 +12598,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -12602,7 +12662,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -12704,7 +12764,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -12770,7 +12830,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -13113,7 +13173,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": true
     },
     {
@@ -13256,7 +13316,7 @@
             }
         },
         "aircraft_type": "E195",
-        "aircraft_size": "中型",
+        "aircraft_size": "小型",
         "is_morning": false
     },
     {
@@ -16521,7 +16581,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -16733,7 +16793,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -16957,7 +17017,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -16989,7 +17049,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -17317,7 +17377,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -17453,7 +17513,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -17485,7 +17545,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -17581,7 +17641,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -17613,7 +17673,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -17814,7 +17874,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -17939,7 +17999,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -18276,7 +18336,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -18553,7 +18613,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -18641,7 +18701,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -18704,7 +18764,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -18832,7 +18892,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -18896,7 +18956,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -18928,7 +18988,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -18960,7 +19020,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -18992,7 +19052,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -19056,7 +19116,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -19184,7 +19244,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -19211,7 +19271,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -19243,7 +19303,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -19397,7 +19457,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -19429,7 +19489,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -19519,7 +19579,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -19656,7 +19716,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -19720,7 +19780,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -19752,7 +19812,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -19784,7 +19844,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -19816,7 +19876,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -19848,7 +19908,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -20037,7 +20097,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -20133,7 +20193,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -20269,7 +20329,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -20301,7 +20361,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -20394,7 +20454,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -20458,7 +20518,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -20647,7 +20707,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -20807,7 +20867,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -20871,7 +20931,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -20967,7 +21027,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -21007,7 +21067,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -21033,7 +21093,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -21314,7 +21374,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -21506,7 +21566,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -21578,7 +21638,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -21670,7 +21730,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -22082,7 +22142,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -22239,7 +22299,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -22303,7 +22363,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -22371,7 +22431,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -22435,7 +22495,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -22525,7 +22585,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -22629,7 +22689,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -22956,7 +23016,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -22988,7 +23048,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -23052,7 +23112,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -23084,7 +23144,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -23116,7 +23176,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -23588,7 +23648,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -23620,7 +23680,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -23886,7 +23946,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -23950,7 +24010,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -23982,7 +24042,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -24014,7 +24074,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -24102,7 +24162,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -24134,7 +24194,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -24166,7 +24226,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -24198,7 +24258,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -24230,7 +24290,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -24262,7 +24322,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -24372,7 +24432,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -24404,7 +24464,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25022,7 +25082,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -25054,7 +25114,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -25086,7 +25146,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -25118,7 +25178,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25150,7 +25210,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25182,7 +25242,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25214,7 +25274,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25476,7 +25536,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -25548,7 +25608,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -25641,7 +25701,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25673,7 +25733,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25795,7 +25855,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -25824,7 +25884,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -25917,7 +25977,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -26274,7 +26334,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -26306,7 +26366,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -26334,7 +26394,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -26366,7 +26426,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -26398,7 +26458,7 @@
             }
         },
         "aircraft_type": "A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -26430,7 +26490,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -26462,7 +26522,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -26790,7 +26850,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -26990,7 +27050,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -27017,7 +27077,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -27049,7 +27109,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -27108,7 +27168,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -27140,7 +27200,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -27172,7 +27232,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -27204,7 +27264,7 @@
             }
         },
         "aircraft_type": "A20N/A21N/A332/A333/A339/B738/B38M/B788/B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -27519,7 +27579,7 @@
             }
         },
         "aircraft_type": "B789",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -27551,7 +27611,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -27583,7 +27643,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -27758,7 +27818,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -28079,7 +28139,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -28172,7 +28232,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -28201,7 +28261,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -28434,7 +28494,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -28530,7 +28590,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -28887,7 +28947,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -29069,7 +29129,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -29391,7 +29451,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -29533,7 +29593,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -29707,7 +29767,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -29739,7 +29799,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -29956,7 +30016,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -29988,7 +30048,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -30286,7 +30346,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -30318,7 +30378,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -30422,7 +30482,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -30494,7 +30554,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -30526,7 +30586,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -30622,7 +30682,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -30891,7 +30951,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -31027,7 +31087,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -31192,7 +31252,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": false
     },
     {
@@ -31260,7 +31320,7 @@
             }
         },
         "aircraft_type": "A319/A320/A321/A21N/A332/A333",
-        "aircraft_size": "中型",
+        "aircraft_size": "大型",
         "is_morning": true
     },
     {
@@ -36914,78 +36974,46 @@
 
         // ==============================================
 
-        const airportCoords = {}; 
-        airports.forEach(a => airportCoords[a[0]] = [a[1], a[2]]);
+        const airportCoords = {}; airports.forEach(a => airportCoords[a[0]] = [a[1], a[2]]);
 
         function parseDateRanges(dateStr) {
             if (!dateStr) return [];
-            return dateStr.split(/[&,]/).map(range => {
-                const [start, end] = range.split('-').map(s => s.trim());
-                return { start: new Date(start).getTime(), end: new Date(end).getTime() };
-            });
+            return dateStr.split(/[&,]/).map(range => { const [start, end] = range.split('-').map(s => s.trim()); return { start: new Date(start).getTime(), end: new Date(end).getTime() }; });
         }
 
-        let rawMinDate = new Date(8640000000000000);
-        let globalMaxDate = new Date(-8640000000000000);
+        let rawMinDate = new Date(8640000000000000), globalMaxDate = new Date(-8640000000000000);
+        flights.forEach(f => { parseDateRanges(f.date_range).forEach(r => { if(r.start < rawMinDate) rawMinDate = new Date(r.start); if(r.end > globalMaxDate) globalMaxDate = new Date(r.end); }); });
         
-        flights.forEach(f => {
-            const ranges = parseDateRanges(f.date_range);
-            ranges.forEach(r => {
-                if(r.start < rawMinDate) rawMinDate = new Date(r.start);
-                if(r.end > globalMaxDate) globalMaxDate = new Date(r.end);
-            });
-        });
-        
-        let todayPlus2 = new Date();
-        todayPlus2.setHours(0, 0, 0, 0);
-        todayPlus2.setDate(todayPlus2.getDate() + 2);
-        
+        let todayPlus2 = new Date(); todayPlus2.setHours(0, 0, 0, 0); todayPlus2.setDate(todayPlus2.getDate() + 2);
         let globalMinDate = rawMinDate > todayPlus2 ? rawMinDate : todayPlus2;
         if (globalMaxDate < globalMinDate) globalMaxDate = new Date(globalMinDate.getTime() + 60*24*60*60*1000); 
         
-        const totalMs = globalMaxDate - globalMinDate;
-        const totalWeeks = Math.max(1, Math.ceil(totalMs / (7 * 24 * 60 * 60 * 1000)));
+        const totalMs = globalMaxDate - globalMinDate, totalWeeks = Math.max(1, Math.ceil(totalMs / (7 * 24 * 60 * 60 * 1000)));
         const formatShortDate = (date) => `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
         
         function initDateSlider() {
             const minEl = document.getElementById('date-range-min'), maxEl = document.getElementById('date-range-max');
             const fillEl = document.getElementById('slider-range-fill'), startLbl = document.getElementById('date-label-start'), endLbl = document.getElementById('date-label-end');
-            
-            minEl.max = totalWeeks; maxEl.max = totalWeeks;
-            minEl.value = 0; maxEl.value = totalWeeks;
+            minEl.max = totalWeeks; maxEl.max = totalWeeks; minEl.value = 0; maxEl.value = totalWeeks;
             
             function updateSlider() {
                 let minVal = parseInt(minEl.value), maxVal = parseInt(maxEl.value);
                 if (minVal > maxVal) { const tmp = minVal; minVal = maxVal; maxVal = tmp; }
-                
                 const minPct = (minVal / totalWeeks) * 100, maxPct = (maxVal / totalWeeks) * 100;
                 fillEl.style.left = minPct + '%'; fillEl.style.width = (maxPct - minPct) + '%';
-                
-                const curStart = new Date(globalMinDate.getTime() + minVal * 7 * 24 * 60 * 60 * 1000);
-                const curEnd = new Date(globalMinDate.getTime() + maxVal * 7 * 24 * 60 * 60 * 1000);
-                const dispEnd = curEnd > globalMaxDate ? globalMaxDate : curEnd;
-                
-                startLbl.textContent = formatShortDate(curStart);
-                endLbl.textContent = formatShortDate(dispEnd);
+                startLbl.textContent = formatShortDate(new Date(globalMinDate.getTime() + minVal * 7 * 24 * 60 * 60 * 1000));
+                endLbl.textContent = formatShortDate(new Date(Math.min(globalMinDate.getTime() + maxVal * 7 * 24 * 60 * 60 * 1000, globalMaxDate.getTime())));
                 updateDisplay();
             }
-            
             minEl.addEventListener('input', updateSlider); maxEl.addEventListener('input', updateSlider);
             
-            const ticksEl = document.getElementById('date-ticks');
-            ticksEl.innerHTML = '';
-            let tickInterval = Math.ceil(totalWeeks / 10);
-            if (tickInterval < 1) tickInterval = 1;
-            
+            const ticksEl = document.getElementById('date-ticks'); ticksEl.innerHTML = '';
+            let tickInterval = Math.max(1, Math.ceil(totalWeeks / 10));
             for(let w = 0; w <= totalWeeks; w += tickInterval) {
                 const pct = (w / totalWeeks) * 100;
                 if (pct > 2 && pct < 98) { 
                     const d = new Date(globalMinDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
-                    const tick = document.createElement('div');
-                    tick.className = 'date-tick';
-                    tick.style.left = pct + '%';
-                    tick.textContent = `${d.getMonth()+1}/${d.getDate()}`;
-                    ticksEl.appendChild(tick);
+                    const tick = document.createElement('div'); tick.className = 'date-tick'; tick.style.left = pct + '%'; tick.textContent = `${d.getMonth()+1}/${d.getDate()}`; ticksEl.appendChild(tick);
                 }
             }
             updateSlider();
@@ -36995,18 +37023,14 @@
             const routesMap = {};
             flightsData.forEach(flight => {
                 for (let i = 0; i < flight.route.length - 1; i++) {
-                    const dep = flight.route[i], arr = flight.route[i+1];
-                    const legKey = `${dep}-${arr}`;
-                    if (!routesMap[legKey]) {
-                        routesMap[legKey] = { route_key: legKey, departure: dep, arrival: arr, departure_coord: airportCoords[dep], arrival_coord: airportCoords[arr], mapped_flights: [], has_morning: false, has_evening: false };
-                    }
+                    const dep = flight.route[i], arr = flight.route[i+1], legKey = `${dep}-${arr}`;
+                    if (!routesMap[legKey]) routesMap[legKey] = { route_key: legKey, departure: dep, arrival: arr, departure_coord: airportCoords[dep], arrival_coord: airportCoords[arr], mapped_flights: [], has_morning: false, has_evening: false };
                     routesMap[legKey].mapped_flights.push({ flight: flight, leg_dep: dep, leg_arr: arr });
-                    if (flight.is_morning) routesMap[legKey].has_morning = true;
-                    if (!flight.is_morning) routesMap[legKey].has_evening = true;
+                    if (flight.is_morning) routesMap[legKey].has_morning = true; else routesMap[legKey].has_evening = true;
                 }
             });
             return Object.values(routesMap).map(route => {
-                if (route.has_morning && route.has_evening) { route.color = "#CE6A85"; } else if (route.has_morning) { route.color = "#FF8C61"; } else { route.color = "#4E598C"; }
+                if (route.has_morning && route.has_evening) route.color = "#CE6A85"; else if (route.has_morning) route.color = "#FF8C61"; else route.color = "#4E598C";
                 return route;
             });
         }
@@ -37015,47 +37039,39 @@
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([33.69481845, 110.698633], 5);
         let currentTileLayer = null;
 
-        // 全新的底部来源与免责申明展示
-        L.control.attribution({position: 'bottomright', prefix: false}).addTo(map);
-        map.attributionControl.addAttribution('航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理 | 项目已开源至 <strong><a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank">Github</a></strong> | <span class="inline-disclaimer-wrapper" style="cursor:help;">免责申明<div class="inline-disclaimer-popup">机场、机型等信息整理自公开数据，仅供参考。网站仅提供信息查询及可视化，所涉及公司名称及标识均归其各自所有者所有，不存在任何隶属或合作关系。</div></span>&copy; <a href="https://carto.com/" target="_blank">CARTO</a>');
-
         function updateMapTheme(e) {
-            const isDark = e.matches;
             if (currentTileLayer) map.removeLayer(currentTileLayer);
-            const tileUrl = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
-            currentTileLayer = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+            currentTileLayer = L.tileLayer(e.matches ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
         }
         const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         darkModeMediaQuery.addListener(updateMapTheme); updateMapTheme(darkModeMediaQuery); 
         
-        let activeRouteKey = null, routeLayers = [], airportMarkers = [], selectedAirport = null, panelVisible = false, isAnimating = false;
+        let activeRouteKey = null, routeLayers = [], airportMarkers = [], selectedAirport = null, renderedRouteObjects = [];
         
-        let renderedRouteObjects = [];
-        
-        function toggleControlPanel() {
-            if (isAnimating) return;
-            isAnimating = true;
-            const panel = document.getElementById('control-panel'), btn = document.getElementById('filter-toggle-btn'), backdrop = document.getElementById('panel-backdrop');
-            if (!panelVisible) {
-                panelVisible = true; btn.classList.add('panel-open'); backdrop.classList.add('visible');
-                setTimeout(() => { panel.classList.add('visible'); isAnimating = false; }, 100);
-            } else {
-                panelVisible = false; panel.classList.remove('visible'); 
-                setTimeout(() => { backdrop.classList.remove('visible'); btn.classList.remove('panel-open'); isAnimating = false; }, 100);
-            }
+        /* 独立解耦的抽屉动效与按键高亮控制 */
+        const uiContainer = document.getElementById('ui-container');
+        if (window.innerWidth > 768) {
+            document.getElementById('desktop-trigger').addEventListener('mouseenter', () => uiContainer.classList.add('drawers-open'));
+            uiContainer.addEventListener('mouseleave', () => uiContainer.classList.remove('drawers-open'));
+        } else {
+            let touchStartY = 0;
+            const mobileArea = document.getElementById('mobile-trigger');
+            mobileArea.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, {passive: true});
+            mobileArea.addEventListener('touchend', e => {
+                let touchEndY = e.changedTouches[0].clientY;
+                if (touchStartY - touchEndY > 30) uiContainer.classList.add('drawers-open');
+                else if (touchEndY - touchStartY > 30) uiContainer.classList.remove('drawers-open');
+                else uiContainer.classList.toggle('drawers-open');
+            });
         }
         
-        function toggleDay(day) {
-            const cb = document.getElementById(`day${day}`);
-            cb.checked = !cb.checked; cb.parentElement.classList.toggle('checked', cb.checked);
-            updateDisplay();
-        }
+        document.querySelectorAll('.icon-btn, .day-btn').forEach(btn => {
+            btn.addEventListener('click', () => { btn.classList.toggle('active'); updateDisplay(); });
+        });
         
         function hideInfoPanel() {
             const panel = document.getElementById('info-panel');
-            panel.classList.add('hiding');
-            activeRouteKey = null; 
-            setTimeout(() => { panel.style.display = 'none'; panel.classList.remove('hiding', 'visible'); }, 300);
+            panel.classList.remove('visible'); activeRouteKey = null; 
         }
         
         function formatSmartDateRange(dateStr) {
@@ -37070,69 +37086,40 @@
             let html = '';
             matchingMappedFlights.forEach(mappedInfo => {
                 const flight = mappedInfo.flight;
-                
                 const themeColor = flight.is_morning ? '#FF8C61' : '#4E598C';
                 const bgIcon = flight.is_morning ? '☀️' : '🌙';
                 const logoHtml = `<img class="card-bg-logo" src="logo/${flight.airline}.png" alt="${flight.airline}" onerror="this.style.display='none'">`;
-
-                const daysArray = [1, 2, 3, 4, 5, 6, 7];
-                const daysNames = ['一', '二', '三', '四', '五', '六', '日'];
+                const daysArray = [1, 2, 3, 4, 5, 6, 7], daysNames = ['一', '二', '三', '四', '五', '六', '日'];
                 let circlesHTML = daysArray.map(d => `<div class="day-circle" style="${flight.days.includes(d) ? `background-color: ${themeColor}; color: white; border-color: ${themeColor};` : ''}">${daysNames[d-1]}</div>`).join('');
                 
-                // 机型混合展示逻辑：如果是大中小混合或者有分割符，则统一为默认
-                let displaySize = flight.aircraft_size;
-                if (displaySize && displaySize.match(/[大中小]型/g) && displaySize.match(/[大中小]型/g).length > 1) {
-                    displaySize = '默认';
-                } else if (displaySize && displaySize.includes('/')) {
-                    displaySize = '默认';
-                }
+                let displaySize = flight.aircraft_size || '默认';
+                if (displaySize.match(/[大中小]型/g)?.length > 1 || displaySize.includes('/')) displaySize = '默认';
 
                 let flowHTML = `<div class="flight-flow">`;
                 for(let i = 0; i < flight.route.length; i++) {
                     const aptFull = flight.route[i]; const [city, apt] = aptFull.split('/');
-                    
-                    let arrTime = '--:--', depTime = '--:--';
-                    let arrNote = '', depNote = '';
-                    
-                    if (i > 0) { 
-                        const p = flight.time_details[`${flight.route[i-1]}-${aptFull}`]; 
-                        if (p) { arrTime = p.arr.replace('次日','+1'); arrNote = p.arr_note; } 
-                    }
-                    if (i < flight.route.length - 1) { 
-                        const n = flight.time_details[`${aptFull}-${flight.route[i+1]}`]; 
-                        if (n) { depTime = n.dep.replace('次日','+1'); depNote = n.dep_note; } 
-                    }
+                    let arrTime = '--:--', depTime = '--:--', arrNote = '', depNote = '';
+                    if (i > 0) { const p = flight.time_details[`${flight.route[i-1]}-${aptFull}`]; if (p) { arrTime = p.arr.replace('次日','+1'); arrNote = p.arr_note; } }
+                    if (i < flight.route.length - 1) { const n = flight.time_details[`${aptFull}-${flight.route[i+1]}`]; if (n) { depTime = n.dep.replace('次日','+1'); depNote = n.dep_note; } }
 
-                    let isArrPred = arrNote && arrNote.includes('预测');
-                    let isDepPred = depNote && depNote.includes('预测');
+                    let isArrPred = arrNote && arrNote.includes('预测'), isDepPred = depNote && depNote.includes('预测');
+                    let arrContent = `<span class="${isArrPred ? 'time-predicted' : ''}" style="${!isArrPred ? `color: ${themeColor};` : ''}">${arrTime}</span>`;
+                    let arrHtml = arrNote ? `<span style="position:relative;"><span class="time-note-emoji left" data-tooltip="${arrNote}">🪧</span>${arrContent}</span>` : arrContent;
+                    let depContent = `<span class="${isDepPred ? 'time-predicted' : ''}" style="${!isDepPred ? `color: ${themeColor};` : ''}">${depTime}</span>`;
+                    let depHtml = depNote ? `<span style="position:relative;">${depContent}<span class="time-note-emoji right" data-tooltip="${depNote}">🪧</span></span>` : depContent;
 
-                    let arrContent = `<span class="${isArrPred ? 'time-predicted' : ''}" style="${!isArrPred ? `color: ${themeColor}; font-weight: 900;` : ''}">${arrTime}</span>`;
-                    let arrHtml = arrContent;
-                    if (arrNote) arrHtml = `<span style="position:relative;"><span class="time-note-emoji left" data-tooltip="${arrNote}">🪧</span>${arrContent}</span>`;
-                    
-                    let depContent = `<span class="${isDepPred ? 'time-predicted' : ''}" style="${!isDepPred ? `color: ${themeColor}; font-weight: 900;` : ''}">${depTime}</span>`;
-                    let depHtml = depContent;
-                    if (depNote) depHtml = `<span style="position:relative;">${depContent}<span class="time-note-emoji right" data-tooltip="${depNote}">🪧</span></span>`;
-
-                    let timeBlock = i === 0 ? `<div class="station-time">${depHtml}</div>` : 
-                                   (i === flight.route.length - 1 ? `<div class="station-time">${arrHtml}</div>` : 
-                                   `<div class="station-time-group"><span class="station-time">${arrHtml}</span><span class="station-time">${depHtml}</span></div>`);
-
-                    flowHTML += `<div class="segment-station"><div class="station-name">${city}<span class="sub-airport">${apt || ''}</span></div>${timeBlock}</div>`;
+                    let timeBlock = i === 0 ? `<div class="station-time">${depHtml}</div>` : (i === flight.route.length - 1 ? `<div class="station-time">${arrHtml}</div>` : `<div class="station-time-group"><span class="station-time">${arrHtml}</span><span class="station-time">${depHtml}</span></div>`);
+                    flowHTML += `<div class="segment-station"><div class="station-name">${city}</div><span class="sub-airport">${apt || ''}</span>${timeBlock}</div>`;
 
                     if (i < flight.route.length - 1) {
                         const isLegTicketable = flight.ticketable_segments.includes(`${aptFull}-${flight.route[i+1]}`);
-                        const warningElement = isLegTicketable ? '' : `<div class="arrow-warning">⚠</div>`;
                         const strokeColor = isLegTicketable ? themeColor : 'var(--border-color-dark)';
-
                         flowHTML += `
                             <div class="segment-arrow-container">
-                                ${warningElement}
+                                ${isLegTicketable ? '' : `<div class="arrow-warning">⚠</div>`}
                                 <div style="display: flex; align-items: center; width: 100%;">
                                     <div style="flex-grow: 1; height: 2px; ${isLegTicketable ? `background-color: ${strokeColor};` : `border-top: 2px dashed ${strokeColor};`}"></div>
-                                    <svg width="8" height="12" viewBox="0 0 8 12" style="margin-left: 1px;">
-                                        <path d="M 0 2 L 6 6 L 0 10" stroke="${strokeColor}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
+                                    <svg width="8" height="12" viewBox="0 0 8 12" style="margin-left: 1px;"><path d="M 0 2 L 6 6 L 0 10" stroke="${strokeColor}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </div>
                             </div>
                         `;
@@ -37158,11 +37145,8 @@
             });
             
             const content = document.getElementById('info-content');
-            content.innerHTML = html || '<p style="text-align:center;color:var(--text-secondary);margin-top:20px;font-weight:600;">当前筛选条件下无航班</p>';
-            
-            const infoPanel = document.getElementById('info-panel');
-            infoPanel.style.display = 'flex';
-            requestAnimationFrame(() => infoPanel.classList.add('visible'));
+            content.innerHTML = html || '<p style="text-align:center;color:var(--text-secondary);margin-top:20px;font-weight:600;">当前筛选无航班</p>';
+            document.getElementById('info-panel').classList.add('visible');
         }
         
         function calculateArcPoints(start, end, curvature = 0.2) {
@@ -37179,185 +37163,205 @@
         }
         
         function initializeControls() {
-            const airlines = new Set(), types = new Set(), sizes = new Set();
+            // A-Z 机场分组加载 (数据已内聚化)
+            const groupedApt = {};
+            airports.forEach(([name, lat, lng, letter]) => { const l = letter || 'O'; if(!groupedApt[l]) groupedApt[l] = []; groupedApt[l].push(name); });
+            let aptHTML = '';
+            Object.keys(groupedApt).sort().forEach(letter => {
+                aptHTML += `<div class="apt-group"><div class="apt-letter">${letter}</div><div class="apt-items">`;
+                groupedApt[letter].forEach(name => { aptHTML += `<button class="apt-item-btn" data-val="${name}">${name.split('/')[0]}</button>`; });
+                aptHTML += `</div></div>`;
+            });
+            document.getElementById('airport-dropdown').innerHTML = aptHTML;
+            
+            // 机场选择与清空快捷交互
+            const aptInputBtn = document.getElementById('airport-input-btn');
+            const aptDrop = document.getElementById('airport-dropdown');
+            aptInputBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (selectedAirport) {
+                    selectedAirport = null; aptInputBtn.textContent = '选择机场...'; aptInputBtn.classList.remove('has-val', 'active');
+                    aptDrop.classList.add('show'); updateDisplay();
+                } else {
+                    aptDrop.classList.toggle('show');
+                }
+            });
+            document.querySelectorAll('.apt-item-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); selectedAirport = btn.dataset.val;
+                    aptInputBtn.textContent = `✕ ${selectedAirport.split('/')[0]}`; aptInputBtn.classList.add('has-val', 'active');
+                    aptDrop.classList.remove('show'); updateDisplay();
+                });
+            });
+            
+            // 航司网格与机型胶囊加载
+            const airlines = new Set(), typeSizes = { '大型': new Set(), '中型': new Set(), '小型': new Set() };
             flights.forEach(f => { 
                 airlines.add(f.airline); 
-                if(f.aircraft_type.includes('/')){
-                    f.aircraft_type.split('/').forEach(t => types.add(t.trim()));
-                } else {
-                    types.add(f.aircraft_type); 
-                }
-                sizes.add(f.aircraft_size); 
+                const size = f.aircraft_size || '默认';
+                if(!typeSizes[size]) typeSizes[size] = new Set();
+                if(f.aircraft_type.includes('/')){ f.aircraft_type.split('/').forEach(t => typeSizes[size].add(t.trim())); } else { typeSizes[size].add(f.aircraft_type); }
             });
-            const populate = (id, set) => {
-                const sel = document.getElementById(id);
-                Array.from(set).sort().forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); });
-            };
-            populate('airline-filter', airlines); populate('aircraft-type-filter', types); populate('aircraft-size-filter', sizes);
-            const as = document.getElementById('airport-filter');
-            airports.sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n])=>{ const o=document.createElement('option'); o.value=o.textContent=n; as.appendChild(o); });
-            document.querySelectorAll('select').forEach(e => e.addEventListener('change', updateDisplay));
+            
+            const grid = document.getElementById('airlines-grid');
+            Array.from(airlines).forEach(al => {
+                const btn = document.createElement('div'); btn.className = 'airline-btn glow-btn active'; btn.dataset.val = al;
+                btn.innerHTML = `<img src="logo/${al}.png" alt="${al}" onerror="this.style.display='none'; this.parentElement.innerText='${al.substr(0,2)}';">`;
+                btn.addEventListener('click', () => { btn.classList.toggle('active'); updateDisplay(); });
+                grid.insertBefore(btn, document.querySelector('.aircraft-wrapper'));
+            });
+            
+            // 机型按大小分组逻辑
+            let acHTML = '';
+            ['大型', '中型', '小型'].forEach(size => {
+                if (typeSizes[size] && typeSizes[size].size > 0) {
+                    acHTML += `<div class="ac-group"><div class="ac-header"><span>${size}机型</span><span class="ac-select-all" data-size="${size}">全反选</span></div><div class="ac-items">`;
+                    Array.from(typeSizes[size]).sort().forEach(type => {
+                        acHTML += `<button class="ac-type-btn glow-btn active" data-type="${type}">${type}</button>`;
+                    });
+                    acHTML += `</div></div>`;
+                }
+            });
+            document.getElementById('aircraft-dropdown').innerHTML = acHTML;
+            
+            const acToggleBtn = document.getElementById('aircraft-toggle-btn');
+            const acDrop = document.getElementById('aircraft-dropdown');
+            acToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); acDrop.classList.toggle('show'); });
+            
+            document.querySelectorAll('.ac-type-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); btn.classList.toggle('active'); 
+                    const anyActive = document.querySelectorAll('.ac-type-btn.active').length > 0;
+                    anyActive ? acToggleBtn.classList.add('active') : acToggleBtn.classList.remove('active');
+                    updateDisplay();
+                });
+            });
+            document.querySelectorAll('.ac-select-all').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    const btns = btn.closest('.ac-group').querySelectorAll('.ac-type-btn');
+                    const allActive = Array.from(btns).every(b => b.classList.contains('active'));
+                    btns.forEach(b => allActive ? b.classList.remove('active') : b.classList.add('active'));
+                    const anyActive = document.querySelectorAll('.ac-type-btn.active').length > 0;
+                    anyActive ? acToggleBtn.classList.add('active') : acToggleBtn.classList.remove('active');
+                    updateDisplay();
+                });
+            });
+            
+            // 全局脱焦收起菜单
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#airport-input-btn') && !e.target.closest('#airport-dropdown')) document.getElementById('airport-dropdown').classList.remove('show');
+                if (!e.target.closest('.aircraft-wrapper')) document.getElementById('aircraft-dropdown').classList.remove('show');
+            });
         }
 
-        let lastConnectedAirports = new Set();
-        let globalHasActiveFilter = false;
+        let lastConnectedAirports = new Set(), globalHasActiveFilter = false;
         
-        // 核心：基于“中心 80% 视野”动态计算透明度
         function updateRoutesVisibility() {
             if (!globalHasActiveFilter) return;
-            const bounds = map.getBounds();
-            const center = bounds.getCenter();
-            
-            // 计算屏幕中心 80% 的虚拟边界框
-            const latSpan = bounds.getNorth() - bounds.getSouth();
-            const lngSpan = bounds.getEast() - bounds.getWest();
-            const inner80Bounds = L.latLngBounds(
-                [center.lat - latSpan * 0.4, center.lng - lngSpan * 0.4],
-                [center.lat + latSpan * 0.4, center.lng + lngSpan * 0.4]
-            );
+            const bounds = map.getBounds(), center = bounds.getCenter();
+            const latSpan = bounds.getNorth() - bounds.getSouth(), lngSpan = bounds.getEast() - bounds.getWest();
+            const inner80Bounds = L.latLngBounds([center.lat - latSpan * 0.4, center.lng - lngSpan * 0.4], [center.lat + latSpan * 0.4, center.lng + lngSpan * 0.4]);
             
             let cssRules = '';
             renderedRouteObjects.forEach(item => {
-                // 判断出发和到达是否都在 80% 核心区以外
-                const depInView = inner80Bounds.contains(item.depCoord);
-                const arrInView = inner80Bounds.contains(item.arrCoord);
-                const isLongAndOut = !depInView && !arrInView;
-                
-                // IN: 透明度乘以 1(保留渐变), OUT: 强制整体暗化至 15%
-                const targetOpacity = isLongAndOut ? 0.15 : 1; 
-                
-                // 将透明度规则直接拼接到 CSS 字符串中
+                const targetOpacity = (!inner80Bounds.contains(item.depCoord) && !inner80Bounds.contains(item.arrCoord)) ? 0.15 : 1; 
                 cssRules += `.${item.routeId} { opacity: ${targetOpacity} !important; }\n`;
             });
-            
             document.getElementById('dynamic-route-styles').innerHTML = cssRules;
         }
-        
-        map.on('moveend', updateRoutesVisibility);
-        map.on('zoomend', updateRoutesVisibility);
+        map.on('moveend', updateRoutesVisibility); map.on('zoomend', updateRoutesVisibility);
         
         function updateAirportLabels() {
             const zoom = map.getZoom();
-            let showCount = airports.length;
-            if (zoom <= 4) showCount = 8;
-            else if (zoom === 5) showCount = 15;
-            else if (zoom === 6) showCount = 30;
-            else if (zoom === 7) showCount = 60;
-            
+            let showCount = zoom <= 4 ? 8 : (zoom === 5 ? 15 : (zoom === 6 ? 30 : 60));
             airportMarkers.forEach(m => {
-                let isPermanent = false;
-                if (globalHasActiveFilter) {
-                    isPermanent = lastConnectedAirports.has(m.airportName);
-                } else {
-                    isPermanent = m.airportIndex < showCount;
-                }
-                
+                let isPermanent = globalHasActiveFilter ? lastConnectedAirports.has(m.airportName) : m.airportIndex < showCount;
                 const el = document.getElementById(`apt-marker-${m.airportIndex}`);
                 if (el) {
-                    if (isPermanent) el.classList.remove('collapsed');
-                    else el.classList.add('collapsed');
-                    
-                    if (m.airportName === selectedAirport) el.classList.add('selected');
-                    else el.classList.remove('selected');
+                    isPermanent ? el.classList.remove('collapsed') : el.classList.add('collapsed');
+                    m.airportName === selectedAirport ? el.classList.add('selected') : el.classList.remove('selected');
                 }
             });
         }
         
         function initAirports() {
             airports.forEach(([name, lat, lng], idx) => {
-                const m = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        className: 'custom-airport-wrapper',
-                        html: `<div class="airport-marker collapsed" id="apt-marker-${idx}">${name}</div>`,
-                        iconSize: [0, 0]
-                    })
-                }).addTo(map);
-                
-                m.airportName = name;
-                m.airportIndex = idx;
-                
-                // 移动端防抖 (Debounce)
-                m.lastClickTime = 0;
+                const m = L.marker([lat, lng], { icon: L.divIcon({ className: 'custom-airport-wrapper', html: `<div class="airport-marker collapsed" id="apt-marker-${idx}">${name}</div>`, iconSize: [0, 0] }) }).addTo(map);
+                m.airportName = name; m.airportIndex = idx; m.lastClickTime = 0;
                 m.on('click', e => {
                     L.DomEvent.stopPropagation(e);
-                    const now = Date.now();
-                    if (now - m.lastClickTime < 400) return; 
-                    m.lastClickTime = now;
+                    if (Date.now() - m.lastClickTime < 400) return; m.lastClickTime = Date.now();
                     
                     selectedAirport = selectedAirport === name ? null : name;
-                    document.getElementById('airport-filter').value = selectedAirport || ''; updateDisplay();
+                    const aptInputBtn = document.getElementById('airport-input-btn');
+                    if(selectedAirport) {
+                        aptInputBtn.textContent = `✕ ${selectedAirport.split('/')[0]}`; aptInputBtn.classList.add('has-val', 'active');
+                    } else {
+                        aptInputBtn.textContent = '选择机场...'; aptInputBtn.classList.remove('has-val', 'active');
+                    }
+                    updateDisplay();
                 });
-
                 m.on('mouseover', () => { document.getElementById(`apt-marker-${idx}`).classList.remove('collapsed'); }); 
                 m.on('mouseout', () => { updateAirportLabels(); });
-                
                 airportMarkers.push(m);
             });
         }
         map.on('zoomend', updateAirportLabels);
         
         function getCurrentFilters() {
-            const days = []; for (let i = 1; i <= 7; i++) if (document.getElementById(`day${i}`).checked) days.push(i);
-            let minVal = parseInt(document.getElementById('date-range-min').value);
-            let maxVal = parseInt(document.getElementById('date-range-max').value);
+            const days = Array.from(document.querySelectorAll('.day-btn.active')).map(b => parseInt(b.dataset.val));
+            const times = Array.from(document.querySelectorAll('.toggle-time.active')).map(b => b.dataset.val);
+            const dirs = Array.from(document.querySelectorAll('.toggle-dir.active')).map(b => b.dataset.val);
+            const airlines = Array.from(document.querySelectorAll('.airline-btn.active')).map(b => b.dataset.val);
+            const aircrafts = Array.from(document.querySelectorAll('.ac-type-btn.active')).map(b => b.dataset.type);
+            
+            let minVal = parseInt(document.getElementById('date-range-min').value), maxVal = parseInt(document.getElementById('date-range-max').value);
             if(minVal > maxVal) { const t = minVal; minVal = maxVal; maxVal = t; }
             
             return {
-                days: days, airline: document.getElementById('airline-filter').value, timePeriod: document.getElementById('time-period-filter').value,
-                airport: document.getElementById('airport-filter').value, airportDirection: document.getElementById('airport-direction').value,
-                aircraftType: document.getElementById('aircraft-type-filter').value, aircraftSize: document.getElementById('aircraft-size-filter').value,
+                days: days, airlines: airlines, times: times, dirs: dirs, aircrafts: aircrafts, airport: selectedAirport || '',
                 startDateMs: globalMinDate.getTime() + minVal * 7 * 24 * 60 * 60 * 1000, 
                 endDateMs: globalMinDate.getTime() + maxVal * 7 * 24 * 60 * 60 * 1000
             };
         }
         
-        function isMappedFlightVisible(mappedInfo, filters, applyAirportStrict = true) {
-            const f = mappedInfo.flight, lDep = mappedInfo.leg_dep, lArr = mappedInfo.leg_arr;
+        function isMappedFlightVisible(mappedInfo, filters) {
+            const f = mappedInfo.flight;
             
-            if (!f.days.some(d => filters.days.includes(d))) return false;
-            if (filters.airline && f.airline !== filters.airline) return false;
-            if (filters.timePeriod === 'morning' && !f.is_morning) return false;
-            if (filters.timePeriod === 'evening' && f.is_morning) return false;
-            if (filters.aircraftSize && f.aircraft_size !== filters.aircraftSize) return false;
+            // 【革命性解耦：默认全选拦截器】
+            if (filters.days.length === 0 || !f.days.some(d => filters.days.includes(d))) return false;
+            if (filters.airlines.length === 0 || !filters.airlines.includes(f.airline)) return false;
+            if (filters.aircrafts.length === 0 || !f.aircraft_type.split('/').some(t => filters.aircrafts.includes(t.trim()))) return false;
             
-            if (filters.aircraftType) {
-                const types = f.aircraft_type.split('/').map(t => t.trim());
-                if (!types.includes(filters.aircraftType)) return false;
-            }
-
+            if (filters.times.length === 0) return false;
+            let tMatch = false; if (filters.times.includes('morning') && f.is_morning) tMatch = true; if (filters.times.includes('evening') && !f.is_morning) tMatch = true; if (!tMatch) return false;
+            
             if (f.date_range) {
-                const ranges = parseDateRanges(f.date_range);
-                let matchTime = false;
-                for (let r of ranges) {
-                    if (r.start <= filters.endDateMs && r.end >= filters.startDateMs) { matchTime = true; break; }
-                }
+                const ranges = parseDateRanges(f.date_range); let matchTime = false;
+                for (let r of ranges) { if (r.start <= filters.endDateMs && r.end >= filters.startDateMs) { matchTime = true; break; } }
                 if (!matchTime) return false;
             }
-
-            if (applyAirportStrict && filters.airport) {
+            
+            if (filters.airport) {
+                if (filters.dirs.length === 0) return false;
                 const validTkts = f.ticketable_segments.filter(t => {
                     const [tD, tA] = t.split('-');
-                    if (filters.airportDirection === 'departure') return tD === filters.airport;
-                    if (filters.airportDirection === 'arrival') return tA === filters.airport;
-                    return tD === filters.airport || tA === filters.airport;
+                    let match = false;
+                    if (filters.dirs.includes('departure') && tD === filters.airport) match = true;
+                    if (filters.dirs.includes('arrival') && tA === filters.airport) match = true;
+                    return match;
                 });
                 if (validTkts.length === 0) return false;
-                let inPath = false; const r = f.route, lDIdx = r.indexOf(lDep), lAIdx = r.indexOf(lArr);
-                for (const t of validTkts) {
-                    const [tD, tA] = t.split('-');
-                    if (lDIdx >= r.indexOf(tD) && lAIdx <= r.indexOf(tA) && lDIdx < lAIdx) { inPath = true; break; }
-                }
+                let inPath = false; const r = f.route, lDIdx = r.indexOf(mappedInfo.leg_dep), lAIdx = r.indexOf(mappedInfo.leg_arr);
+                for (const t of validTkts) { const [tD, tA] = t.split('-'); if (lDIdx >= r.indexOf(tD) && lAIdx <= r.indexOf(tA) && lDIdx < lAIdx) { inPath = true; break; } }
                 if (!inPath) return false;
             }
             return true;
         }
         
         function updateDisplay() {
-            routeLayers.forEach(l => map.removeLayer(l)); 
-            routeLayers = [];
-            renderedRouteObjects = [];
-            
-            selectedAirport = document.getElementById('airport-filter').value || null;
+            routeLayers.forEach(l => map.removeLayer(l)); routeLayers = []; renderedRouteObjects = [];
             const filters = getCurrentFilters();
             
             globalHasActiveFilter = (filters.airport !== '');
@@ -37365,125 +37369,68 @@
             
             if (globalHasActiveFilter) {
                 generatedRoutes.forEach(rObj => {
-                    const lineFlights = rObj.mapped_flights.filter(i => isMappedFlightVisible(i, filters, true));
+                    const lineFlights = rObj.mapped_flights.filter(i => isMappedFlightVisible(i, filters));
                     if (lineFlights.length === 0) return;
                     
-                    lastConnectedAirports.add(rObj.departure);
-                    lastConnectedAirports.add(rObj.arrival);
-                    
+                    lastConnectedAirports.add(rObj.departure); lastConnectedAirports.add(rObj.arrival);
                     const pts = calculateArcPoints(rObj.departure_coord, rObj.arrival_coord);
                     const routeUID = `rt-id-${Math.random().toString(36).substr(2, 9)}`;
                     
                     const hitboxLine = L.polyline(pts, { weight: 30, opacity: 0, className: 'route-hitbox' }).addTo(map);
                     routeLayers.push(hitboxLine);
                     
-                    // ==========================================
-                    // 反向流星渐变：出发地最不可见（透明度0），目的地最清晰（透明度0.9）
-                    // ==========================================
                     const numSegments = pts.length - 1;
                     for (let i = 0; i < numSegments; i++) {
                         const ratio = i / Math.max(1, numSegments - 1);
                         const targetOpacity = 0.9 * Math.pow(ratio, 1.5);
-                        
-                        // 5px 描边底色（自动适应主题白/黑）
-                        const outL = L.polyline([pts[i], pts[i+1]], { 
-                            color: 'var(--route-outline-color)', weight: 5, opacity: targetOpacity, 
-                            interactive: false, lineCap: 'round', lineJoin: 'round',
-                            className: `route-anim-layer ${routeUID}` 
-                        }).addTo(map);
-                        
-                        // 3px 彩色核心
-                        const inL = L.polyline([pts[i], pts[i+1]], { 
-                            color: rObj.color, weight: 3, opacity: targetOpacity, 
-                            interactive: false, lineCap: 'round', lineJoin: 'round',
-                            className: `route-anim-layer ${routeUID}` 
-                        }).addTo(map);
-                        
+                        const outL = L.polyline([pts[i], pts[i+1]], { color: 'var(--route-outline-color)', weight: 5, opacity: targetOpacity, interactive: false, lineCap: 'round', lineJoin: 'round', className: `route-anim-layer ${routeUID}` }).addTo(map);
+                        const inL = L.polyline([pts[i], pts[i+1]], { color: rObj.color, weight: 3, opacity: targetOpacity, interactive: false, lineCap: 'round', lineJoin: 'round', className: `route-anim-layer ${routeUID}` }).addTo(map);
                         routeLayers.push(outL, inL);
                     }
                     
-                    // ==========================================
-                    // 引入0.913参数的随机偏移算法，打乱箭头的排布
-                    // ==========================================
                     const arrowOffsetRandomness = 0.913; 
                     const randomOffset = 25 + (Math.random() * arrowOffsetRandomness * 120);
 
                     const dec = L.polylineDecorator(pts, {
                         patterns: [{ offset: randomOffset, repeat: 120, symbol: L.Symbol.arrowHead({
                             pixelSize: 4, headAngle: 75, polygon: false, 
-                            pathOptions: { 
-                                color: 'var(--route-arrow-color)', 
-                                weight: 1, 
-                                className: `route-anim-layer ${routeUID}`, 
-                                interactive: false 
-                            }
+                            pathOptions: { color: 'var(--route-arrow-color)', weight: 1, className: `route-anim-layer ${routeUID}`, interactive: false }
                         })}]
                     }).addTo(map);
                     routeLayers.push(dec);
                     
-                    const arrowLayers = dec.getLayers();
-                    const totalArrows = arrowLayers.length;
+                    const arrowLayers = dec.getLayers(), totalArrows = arrowLayers.length;
                     arrowLayers.forEach((arrow, idx) => {
                         const ratio = totalArrows > 1 ? (idx / (totalArrows - 1)) : 1.0; 
-                        const arrowOp = 0.9 * Math.pow(ratio, 1.5);
-                        arrow.setStyle({ opacity: arrowOp });
+                        arrow.setStyle({ opacity: 0.9 * Math.pow(ratio, 1.5) });
                     });
                   
-                    const clk = e => {
+                    hitboxLine.on('click', e => {
                         L.DomEvent.stopPropagation(e); activeRouteKey = rObj.route_key; 
-                        const panelFlights = rObj.mapped_flights.filter(i => isMappedFlightVisible(i, filters, false));
-                        showInfoPanel(rObj.route_key, rObj.departure, rObj.arrival, panelFlights);
-                    };
-                    hitboxLine.on('click', clk); 
+                        showInfoPanel(rObj.route_key, rObj.departure, rObj.arrival, rObj.mapped_flights.filter(i => isMappedFlightVisible(i, filters)));
+                    }); 
                     
-                    renderedRouteObjects.push({
-                        depCoord: rObj.departure_coord,
-                        arrCoord: rObj.arrival_coord,
-                        routeId: routeUID
-                    });
+                    renderedRouteObjects.push({ depCoord: rObj.departure_coord, arrCoord: rObj.arrival_coord, routeId: routeUID });
                 });
             }
             
             updateAirportLabels();
-            
-            if(globalHasActiveFilter) {
-                updateRoutesVisibility();
-            }
+            if(globalHasActiveFilter) updateRoutesVisibility();
 
             if (activeRouteKey && document.getElementById('info-panel').classList.contains('visible')) {
-                if (!globalHasActiveFilter) {
-                    hideInfoPanel();
-                } else {
-                    const currentRouteObj = generatedRoutes.find(r => r.route_key === activeRouteKey);
-                    if (currentRouteObj) {
-                        const panelFlights = currentRouteObj.mapped_flights.filter(i => isMappedFlightVisible(i, filters, false));
-                        showInfoPanel(currentRouteObj.route_key, currentRouteObj.departure, currentRouteObj.arrival, panelFlights);
-                    }
+                if (!globalHasActiveFilter) hideInfoPanel();
+                else {
+                    const c = generatedRoutes.find(r => r.route_key === activeRouteKey);
+                    if (c) showInfoPanel(c.route_key, c.departure, c.arrival, c.mapped_flights.filter(i => isMappedFlightVisible(i, filters)));
                 }
             }
         }
         
-        function resetFilters() {
-            document.querySelectorAll('.checkbox-item').forEach(i => { i.classList.add('checked'); i.querySelector('input').checked = true; });
-            document.querySelectorAll('select').forEach(s => s.value = ''); document.getElementById('airport-direction').value = '';
-            
-            const minEl = document.getElementById('date-range-min'), maxEl = document.getElementById('date-range-max');
-            minEl.value = 0; maxEl.value = totalWeeks; minEl.dispatchEvent(new Event('input')); 
-            
-            selectedAirport = null; hideInfoPanel(); updateDisplay();
-        }
-        
         map.on('click', () => { if (document.getElementById('info-panel').classList.contains('visible')) hideInfoPanel(); });
-        document.getElementById('info-panel').addEventListener('click', e => {
-            if (e.target.closest('.flight-card')) e.stopPropagation(); 
-            else hideInfoPanel();
-        }); 
+        document.getElementById('info-panel').addEventListener('click', e => { if (e.target.closest('.flight-card')) e.stopPropagation(); else hideInfoPanel(); }); 
         map.doubleClickZoom.disable();
         
-        if(airports.length > 0) {
-            initAirports();
-            initializeControls(); initDateSlider(); updateDisplay();
-        }
+        if(airports.length > 0) { initAirports(); initializeControls(); initDateSlider(); updateDisplay(); }
     </script>
 </body>
 </html>
