@@ -2,12 +2,11 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HNA2666随心飞-航班/航线可视化工具</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         :root {
-            /* 主题色系 */
             --primary-color: #8E6289;
             --primary-glow: rgba(142, 98, 137, 0.6);
             --background-primary: #ffffff;
@@ -20,18 +19,14 @@
             --shadow-medium: rgba(0, 0, 0, 0.15);
             --backdrop-filter: blur(24px);
             
-            /* 航线专用动态颜色 */
             --route-arrow-color: #555555; 
             --route-outline-color: #ffffff; 
             
-            /* 全局统一宽度体系 */
-            --ui-width: 600px;
+            --ui-width: 420px;
         }
         
         @media (max-width: 768px) {
-            :root {
-                --ui-width: calc(100vw - 20px);
-            }
+            :root { --ui-width: calc(100vw - 20px); }
         }
         
         @media (prefers-color-scheme: dark) {
@@ -61,26 +56,23 @@
         #map { height: 100vh; width: 100vw; background-color: var(--background-primary); }
         .leaflet-control-zoom { display: none !important; }
         
-        /* 胶囊机场按钮 */
-        .airport-marker {
-            position: absolute; left: 0; top: 0; 
+        /* 胶囊机场标签 */
+        .airport-marker, .apt-item-btn {
             display: flex; align-items: center; justify-content: center;
             background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
             border: 1px solid var(--border-color-dark); border-radius: 20px; padding: 0 10px;
-            height: 22px; line-height: 20px; min-width: 22px; max-width: 150px;
+            height: 22px; line-height: 20px; min-width: 22px; 
             color: var(--text-primary); font-size: 11px; font-weight: 700; cursor: pointer;
             white-space: nowrap; overflow: hidden; box-shadow: 0 4px 12px var(--shadow-light);
-            user-select: none; -webkit-user-select: none;
-            transform-origin: center center; transform: translate(-50%, -50%) scale(1);
-            transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, color 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none; -webkit-user-select: none; transition: all 0.3s;
         }
+        .airport-marker { position: absolute; left: 0; top: 0; transform-origin: center center; transform: translate(-50%, -50%) scale(1); max-width: 150px; transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, color 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .airport-marker.collapsed { max-width: 22px !important; padding: 0 !important; color: transparent; border-width: 2px; transform: translate(-50%, -50%) scale(0.65); }
-        .airport-marker:not(.collapsed):hover { transform: translate(-50%, -50%) scale(1.05); z-index: 1000 !important; }
+        .airport-marker:not(.collapsed):hover, .apt-item-btn:hover { transform: translate(-50%, -50%) scale(1.05); z-index: 1000 !important; border-color: var(--primary-color); color: var(--primary-color); box-shadow: 0 0 8px var(--primary-glow); }
+        .apt-item-btn:hover { transform: scale(1.05); }
         .airport-marker.selected { background: var(--text-primary); color: var(--background-primary); border-color: transparent; z-index: 1000 !important; transform: translate(-50%, -50%) scale(1.1); }
 
-        /* ================= 核心重构：颗粒化发光交互 UI ================= */
-        
-        /* 通用毛玻璃质感基础 */
+        /* ================= 核心筛选器 UI ================= */
         .glass-element {
             background: var(--background-secondary);
             backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
@@ -90,107 +82,92 @@
         #ui-container { position: absolute; z-index: 1002; display: flex; flex-direction: column; width: var(--ui-width); pointer-events: none; }
         #ui-container > * { pointer-events: auto; }
         
-        /* 移动端上拉提示条外置 */
-        .mobile-handle-wrapper { display: none; justify-content: center; width: 100%; margin-bottom: 8px; cursor: pointer;}
-        .mobile-handle { width: 40px; height: 6px; border-radius: 3px; background: var(--border-color-dark); }
+        /* 指示条样式 */
+        .drawer-handle-wrapper { width: 100%; display: flex; justify-content: center; padding: 6px 0; cursor: pointer; }
+        .drawer-handle { width: 40px; height: 5px; border-radius: 3px; background: var(--border-color-dark); transition: background 0.3s; }
+        .drawer-handle-wrapper:hover .drawer-handle { background: var(--text-secondary); }
+        .pc-handle { display: none; }
+        .mobile-handle { display: none; }
         
-        /* 常亮区：拆分为独立颗粒 */
-        .persistent-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+        /* 常亮区排版 */
+        .persistent-bar { border-radius: 30px; display: flex; flex-direction: column; overflow: hidden; padding: 6px 0;}
+        .persistent-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: calc(100% - 32px); margin: 0 auto; }
         
-        /* 核心发光逻辑：未选中无边框0饱和，选中后荧光边框 */
+        /* 颗粒化按键发光交互逻辑 */
         .glow-btn {
-            border: 1px solid transparent; 
+            border: 1px solid rgba(160, 160, 160, 0.4); 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
             filter: grayscale(100%) opacity(0.4); color: var(--text-primary);
         }
         .glow-btn.active {
-            filter: none; color: var(--primary-color);
-            border-color: var(--primary-color);
+            filter: none; color: var(--primary-color); border-color: var(--primary-color);
             box-shadow: 0 0 10px var(--primary-glow), inset 0 0 5px rgba(142, 98, 137, 0.15);
         }
         
-        .icon-btn { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .icon-btn { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: transparent; }
         
-        /* 中央机场选择框（同样遵循发光逻辑） */
         .airport-input-btn {
-            flex: 1; height: 40px; border-radius: 20px; border: 1px solid transparent;
-            color: var(--text-primary); font-size: 14px; font-weight: 700; 
-            display: flex; align-items: center; justify-content: center;
+            flex: 1; height: 40px; border-radius: 20px; border: 1px solid rgba(160, 160, 160, 0.4); 
+            color: var(--text-primary); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: all 0.3s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px;
         }
-        .airport-input-btn.has-val {
-            border-color: var(--primary-color); color: var(--primary-color); 
-            box-shadow: 0 0 10px var(--primary-glow), inset 0 0 5px rgba(142, 98, 137, 0.15);
-        }
+        .airport-input-btn.has-val { border-color: var(--primary-color); color: var(--primary-color); box-shadow: 0 0 10px var(--primary-glow), inset 0 0 5px rgba(142, 98, 137, 0.15); }
         
-        /* A-Z 机场与机型全宽下拉弹窗 */
+        /* 覆盖式下拉弹窗 */
         .custom-dropdown {
-            position: absolute; left: 0; width: var(--ui-width); z-index: 10000;
+            position: absolute; left: 16px; width: calc(100% - 32px); z-index: 10000;
             border-radius: 24px; padding: 16px; display: none; flex-direction: column; gap: 12px;
-            max-height: 50vh; overflow-y: auto; overflow-x: hidden;
-            border: 1px solid var(--border-color);
+            max-height: 50vh; overflow-y: auto; overflow-x: hidden; border: 1px solid var(--border-color);
+            background: var(--background-secondary); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.2);
         }
+        .custom-dropdown::-webkit-scrollbar { width: 5px; }
+        .custom-dropdown::-webkit-scrollbar-track { background: transparent; }
+        .custom-dropdown::-webkit-scrollbar-thumb { background: var(--border-color-dark); border-radius: 3px; }
         .custom-dropdown.show { display: flex; animation: fadePop 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes fadePop { from{opacity:0; transform:scale(0.98) translateY(10px);} to{opacity:1; transform:scale(1) translateY(0);} }
         
         .apt-group { display: flex; flex-direction: column; gap: 6px; }
         .apt-letter { font-size: 12px; font-weight: 900; color: var(--primary-color); padding-left: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 2px;}
-        .apt-items { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-        .apt-item-btn { padding: 8px 2px; border-radius: 12px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s; white-space: nowrap; overflow: hidden; }
-        .apt-item-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .apt-items { display: flex; flex-wrap: wrap; gap: 8px; }
         
-        /* 抽屉容器逻辑：开启时才赋予外间距分离 */
-        .drawers-wrapper { position: relative; z-index: 5; max-height: 0; overflow: hidden; opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; gap: 10px; }
-        
+        /* 抽屉 */
+        .drawers-wrapper { position: relative; z-index: 5; max-height: 0; overflow: hidden; opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; gap: 12px; margin-bottom: 0;}
         .drawer { border-radius: 24px; padding: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 16px; }
         
-        /* 抽屉1：日期与星期 */
-        .days-container { display: flex; justify-content: space-between; gap: 6px; }
-        .day-btn { flex: 1; height: 36px; border-radius: 18px; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+        .days-container { display: grid; grid-template-columns: repeat(7, 1fr); justify-items: center; gap: 8px; }
+        .day-btn { width: 38px; height: 38px; border-radius: 19px; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; background: transparent; }
         
-        /* 抽屉2：航司与机型胶囊 (2行完美布局) */
         .airlines-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: center; justify-items: center; grid-auto-flow: row dense; }
         .airline-btn { width: 38px; height: 38px; border-radius: 19px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; background: var(--background-primary); }
         .airline-btn img { width: 100%; height: 100%; object-fit: contain; }
-        
         .aircraft-wrapper { grid-area: 2 / 3 / 3 / 6; width: 100%; }
-        .aircraft-capsule-btn { width: 100%; height: 38px; border-radius: 19px; background: var(--background-primary); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;}
+        .aircraft-capsule-btn { width: 100%; height: 38px; border-radius: 19px; background: transparent; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;}
         
-        /* 机型多选面板 */
         .ac-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;}
         .ac-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
         .ac-select-all { color: var(--primary-color); cursor: pointer; padding: 2px 6px; border-radius: 10px; transition: 0.2s; background: transparent; border: 1px solid var(--border-color);}
         .ac-select-all:hover { border-color: var(--primary-color); }
         .ac-items { display: flex; flex-wrap: wrap; gap: 8px; }
-        .ac-type-btn { padding: 6px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; }
+        .ac-type-btn { padding: 6px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; background: transparent;}
 
-        /* 响应式核心定位与间隙衍生 */
+        /* 响应式：指示条与间隙 */
         @media (min-width: 769px) {
             #ui-container { top: 20px; left: 20px; flex-direction: column; }
-            .hover-trigger-zone { position: absolute; top: -20px; left: 0; width: 100%; height: 60px; z-index: 20; cursor: pointer; }
-            
+            .pc-handle { display: flex; }
             #ui-container.drawers-open .drawers-wrapper { max-height: 800px; opacity: 1; overflow: visible; margin-top: 12px; }
-            
-            /* PC端下拉弹窗定位在悬浮栏正下方 */
-            .custom-dropdown { top: 52px; }
-            
-            #info-panel { bottom: 20px; top: auto; left: 20px; }
+            .custom-dropdown { top: 65px; } 
+            #info-panel { bottom: 20px; top: auto; left: 0; }
         }
         @media (max-width: 768px) {
-            #ui-container { bottom: 20px; left: 10px; right: 10px; flex-direction: column-reverse; margin: 0 auto;}
-            .mobile-handle-wrapper { display: flex; }
-            
-            #ui-container.drawers-open .drawers-wrapper { max-height: 800px; opacity: 1; overflow: visible; margin-bottom: 12px; }
-            
-            /* 移动端下拉弹窗定位在悬浮栏正上方 */
-            .custom-dropdown { bottom: 52px; }
-            
-            #info-panel { top: 15px; bottom: auto; left: 10px; }
-            
+            #ui-container { bottom: max(20px, env(safe-area-inset-bottom)); left: 10px; right: 10px; flex-direction: column-reverse; margin: 0 auto;}
+            .mobile-handle { display: flex; }
+            #ui-container.drawers-open .drawers-wrapper { max-height: 800px; opacity: 1; overflow: visible; margin-bottom: 12px; margin-top: 0px;}
+            .custom-dropdown { bottom: 65px; } 
+            #info-panel { top: max(15px, env(safe-area-inset-top)); bottom: auto; left: 0; }
             .airline-btn { width: 36px; height: 36px; }
         }
 
-        /* 遗留时间轴滑块 */
         .date-slider-container { padding: 0 4px; }
         .date-slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--primary-color); font-weight: 600; margin-bottom: 6px; }
         .multi-range { position: relative; height: 20px; background: var(--border-color); border-radius: 10px; margin-bottom: 5px; }
@@ -200,51 +177,67 @@
         .date-ticks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; border-radius: 14px; }
         .date-tick { position: absolute; font-size: 10px; color: var(--text-primary); font-weight: 600; transform: translateX(-50%); line-height: 20px; white-space: nowrap; opacity: 0.8; }
         
-        /* 图例 */
-        .top-right-legend { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
-        .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; color: var(--text-primary); text-shadow: 0 1px 3px var(--background-secondary); }
+        .top-right-legend { position: fixed; top: max(20px, env(safe-area-inset-top)); right: 20px; z-index: 1000; display: flex; flex-direction: row; gap: 16px; pointer-events: none; }
+        .legend-row { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 900; color: var(--text-primary); text-shadow: 0 1px 3px var(--background-secondary); }
         .legend-line { width: 26px; height: 5px; background: var(--route-outline-color); position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border-radius: 2.5px; }
         .legend-line-inner { width: 100%; height: 3px; background: var(--legend-color); border-radius: 1.5px; }
         .legend-line::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 5px; height: 5px; border-top: 1.5px solid var(--route-arrow-color); border-right: 1.5px solid var(--route-arrow-color); }
 
-        .leaflet-control-attribution { background: var(--background-secondary) !important; backdrop-filter: var(--backdrop-filter) !important; -webkit-backdrop-filter: var(--backdrop-filter) !important; border-radius: 10px 0 0 0 !important; color: var(--text-secondary) !important; font-size: 10px !important; border-top: 1px solid var(--border-color); border-left: 1px solid var(--border-color); padding: 4px 10px !important; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; line-height: 1.4; }
-        .leaflet-control-attribution a { color: var(--primary-color) !important; text-decoration: none; font-weight: bold;}
-        
+        /* 强力悬浮免责申明 */
+        .leaflet-bottom.leaflet-right { display: none !important; }
+        .custom-attribution-float {
+            position: fixed; z-index: 10000; pointer-events: auto;
+            bottom: max(2px, env(safe-area-inset-bottom)); right: 2px;
+            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); 
+            border-radius: 16px; color: var(--text-secondary); font-size: 10px; border: 1px solid var(--border-color); 
+            padding: 6px 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; line-height: 1.4;
+            box-shadow: 0 4px 16px var(--shadow-medium);
+        }
+        .custom-attribution-float a { color: var(--primary-color) !important; text-decoration: none; font-weight: bold;}
         .inline-disclaimer-wrapper { position: relative; cursor: help; color: var(--text-primary); font-weight: 700; margin-right: 6px; padding-right: 8px; border-right: 1px solid var(--border-color-dark); }
-        .inline-disclaimer-popup { position: fixed; bottom: 35px; right: 15px; width: 240px; z-index: 10000; background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px 14px; font-size: 11px; font-weight: normal; color: var(--text-primary); line-height: 1.5; box-shadow: 0 4px 16px var(--shadow-medium); opacity: 0; pointer-events: none; transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; transform: translateY(4px); text-align: left; }
+        .inline-disclaimer-popup { position: absolute; bottom: calc(100% + 12px); right: 0; width: 240px; background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px 14px; font-size: 11px; font-weight: normal; color: var(--text-primary); line-height: 1.5; box-shadow: 0 4px 16px var(--shadow-medium); opacity: 0; pointer-events: none; transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; transform: translateY(4px); text-align: left; }
         .inline-disclaimer-wrapper:hover .inline-disclaimer-popup, .inline-disclaimer-popup:hover { opacity: 1; transform: translateY(0); pointer-events: auto; transition-delay: 0s; }
-
-        /* ================= 航班信息框：重置为系统宽度并实现 2 栏排版 ================= */
-        #info-panel { position: absolute; z-index: 1010; width: var(--ui-width); max-height: 55vh; display: none; flex-direction: column; background: transparent; pointer-events: none; }
-        #info-panel.visible { display: flex; opacity: 1; }
         
-        .route-info-header { margin-bottom: 12px; padding: 0 4px; }
+        @media (max-width: 768px) {
+            .custom-attribution-float { left: 50%; right: auto; transform: translateX(-50%); justify-content: center; width: max-content; max-width: calc(100vw - 4px); }
+        }
+
+        /* 航班信息横滑框架 */
+        #info-panel { 
+            position: absolute; z-index: 1010; width: 100vw; display: none; flex-direction: column; 
+            background: transparent; pointer-events: none; padding: 0 20px; box-sizing: border-box;
+        }
+        #info-panel.visible { display: flex; opacity: 1; }
+        .route-info-header { margin-bottom: 12px; padding: 0; }
         .route-info-header h4 { margin: 0; font-size: 20px; font-weight: 900; color: var(--text-primary); text-shadow: 0 2px 10px var(--background-primary), 0 0 5px var(--background-primary); }
         @media (prefers-color-scheme: dark) { .route-info-header h4 { text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.8); } }
         
-        /* 一行两个卡片布局核心 */
         .flights-container { 
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; 
-            overflow-y: auto; padding-right: 2px; padding-bottom: 10px; pointer-events: auto; align-items: start;
+            display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scroll-behavior: smooth;
+            gap: 16px; padding-bottom: 15px; width: 100%; pointer-events: auto; align-items: start;
         }
-        .flights-container::-webkit-scrollbar { width: 4px; }
+        .flights-container::-webkit-scrollbar { height: 4px; }
         .flights-container::-webkit-scrollbar-thumb { background: var(--border-color-dark); border-radius: 2px; }
         
-        .flight-card { background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); border: 1px solid var(--border-color); border-radius: 20px; padding: 12px; box-shadow: 0 6px 16px var(--shadow-medium); position: relative; overflow: hidden; z-index: 1; }
+        .flight-card { 
+            flex: 0 0 auto; width: 320px; max-width: 85vw;
+            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); 
+            border: 1px solid var(--border-color); border-radius: 20px; padding: 14px; 
+            box-shadow: 0 6px 16px var(--shadow-medium); position: relative; overflow: hidden; z-index: 1; 
+        }
         .card-bg-logo { position: absolute; left: -5%; top: 50%; transform: translateY(-50%); height: 105%; max-width: 40%; object-fit: contain; opacity: 0.15; filter: saturate(50%); pointer-events: none; z-index: -1; }
-        .card-bg-icon { position: absolute; right: -0%; top: -2.5%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 50px; opacity: 0.25; pointer-events: none; z-index: -1; line-height: 1; }
+        .card-bg-icon { position: absolute; right: -0%; top: -2.5%; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 60px; opacity: 0.25; pointer-events: none; z-index: -1; line-height: 1; }
         
         .flight-card-header { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; }
-        .flight-no-title { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px;}
-        .aircraft-type-tag { font-size: 9px; color: var(--text-secondary); font-weight: 600; }
+        .flight-no-title { font-size: 13px; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.5px;}
+        .aircraft-type-tag { font-size: 10px; color: var(--text-secondary); font-weight: 600; }
         
-        /* 内部流线压缩适配窄宽度 */
         .flight-flow { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; }
         .segment-station { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; position: relative; z-index: 2; }
-        .station-name { width: 100%; font-size: 14px; font-weight: 900; color: var(--text-primary); text-align: center; line-height: 1.1; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-        .sub-airport { font-size: 8px; font-weight: 500; color: var(--text-secondary); display: block; margin-top: 2px; }
-        .station-time-group { width: 0px; overflow: visible; white-space: nowrap; display: flex; gap: 4px; justify-content: center; align-items: baseline; }
-        .station-time { font-size: 12px; text-align: center; position: relative; font-weight: 800;}
+        .station-name { width: 100%; font-size: 18px; font-weight: 900; color: var(--text-primary); text-align: center; line-height: 1.1; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .sub-airport { min-height: 12px; font-size: 9px; font-weight: 500; color: var(--text-secondary); display: block; margin-top: 2px; }
+        .station-time-group { width: 0px; overflow: visible; white-space: nowrap; display: flex; gap: 6px; justify-content: center; align-items: baseline; }
+        .station-time { font-size: 14px; text-align: center; position: relative; font-weight: 800;}
         .time-predicted { color: var(--text-secondary); font-weight: 700; }
         
         .time-note-emoji { position: absolute; font-size: 10px; cursor: help; bottom: 0px; z-index: 10; }
@@ -253,13 +246,13 @@
         .time-note-emoji::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); color: var(--text-primary); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; box-shadow: 0 4px 12px var(--shadow-medium); pointer-events: none; font-weight: 600; opacity: 0; transition: opacity 0.2s, transform 0.2s; }
         .time-note-emoji:hover::after { opacity: 1; transform: translateX(-50%) translateY(-2px); }
 
-        .segment-arrow-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; flex: 0.5; margin: 0 4px; margin-top: 8px; position: relative;}
+        .segment-arrow-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; flex: 0.8; margin: 0 6px; margin-top: 8px; position: relative;}
         .arrow-warning { font-size: 12px; color: var(--primary-hover); font-weight: 700; position: absolute; top: -14px; cursor: help; z-index: 10; }
         
         .flight-card-footer { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .days-indicator { display: flex; gap: 2px; }
-        .day-circle { width: 14px; height: 14px; border-radius: 7px; background: var(--border-color); color: var(--text-secondary); font-size: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid transparent; }
-        .flight-date-range { font-size: 8px; color: var(--text-secondary); font-weight: 600; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 1px 2px; max-width: 80px; text-align: right; }
+        .days-indicator { display: flex; gap: 3px; }
+        .day-circle { width: 14px; height: 14px; border-radius: 7px; background: var(--border-color); color: var(--text-secondary); font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid transparent; }
+        .flight-date-range { font-size: 9px; color: var(--text-secondary); font-weight: 600; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 1px 3px; max-width: 100px; text-align: right; }
         .date-chunk { white-space: nowrap; }
         
         .route-hitbox { cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -272,10 +265,8 @@
     <div id="map"></div>
     
     <div id="ui-container">
-        <div class="hover-trigger-zone" id="desktop-trigger"></div>
-        
-        <div id="airport-dropdown" class="custom-dropdown glass-element"></div>
-        <div id="aircraft-dropdown" class="custom-dropdown glass-element"></div>
+        <div id="airport-dropdown" class="custom-dropdown"></div>
+        <div id="aircraft-dropdown" class="custom-dropdown"></div>
         
         <div class="drawers-wrapper">
             <div class="drawer glass-element">
@@ -303,18 +294,20 @@
             </div>
         </div>
         
-        <div class="mobile-handle-wrapper" id="mobile-trigger">
-            <div class="mobile-handle"></div>
-        </div>
-        
-        <div class="persistent-controls">
-            <button class="icon-btn glass-element glow-btn active toggle-time" data-val="morning" title="早班">☀️</button>
-            <button class="icon-btn glass-element glow-btn active toggle-time" data-val="evening" title="晚班">🌙</button>
+        <div class="persistent-bar glass-element">
+            <div class="drawer-handle-wrapper pc-handle" id="desktop-handle"><div class="drawer-handle"></div></div>
             
-            <div class="airport-input-btn glass-element glow-btn" id="airport-input-btn">选择机场...</div>
+            <div class="persistent-controls">
+                <button class="icon-btn glow-btn active toggle-time" data-val="morning" title="早班">☀️</button>
+                <button class="icon-btn glow-btn active toggle-time" data-val="evening" title="晚班">🌙</button>
+                
+                <div class="airport-input-btn glow-btn" id="airport-input-btn">选择机场...</div>
+                
+                <button class="icon-btn glow-btn active toggle-dir" data-val="departure" title="起飞">🛫</button>
+                <button class="icon-btn glow-btn active toggle-dir" data-val="arrival" title="降落">🛬</button>
+            </div>
             
-            <button class="icon-btn glass-element glow-btn active toggle-dir" data-val="departure" title="起飞">🛫</button>
-            <button class="icon-btn glass-element glow-btn active toggle-dir" data-val="arrival" title="降落">🛬</button>
+            <div class="drawer-handle-wrapper mobile-handle" id="mobile-handle"><div class="drawer-handle"></div></div>
         </div>
     </div>
     
@@ -324,12 +317,21 @@
         <div class="legend-row"><div class="legend-line" style="--legend-color: #4E598C;"><div class="legend-line-inner"></div></div>晚班</div>
     </div>
     
+    <div class="custom-attribution-float">
+        航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理 | 开源至 <strong><a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank">Github</a></strong> | 
+        <span class="inline-disclaimer-wrapper" style="cursor:help;">免责申明
+            <div class="inline-disclaimer-popup">机场等信息整理自公开数据仅供参考。网站仅提供可视化查询，所涉及公司名称及标识均归其各自所有者所有，不存在任何隶属或合作。</div>
+        </span>
+        &copy; <a href="https://carto.com/" target="_blank">CARTO</a>
+    </div>
+    
     <div id="info-panel"><div class="route-info-header"><h4 id="panel-route-title"></h4></div><div class="flights-container" id="info-content"></div></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
     
     <script>
+        // ================= 数据注入区 =================
         const airports = [
     [
         "上海/浦东",
@@ -37048,30 +37050,43 @@
         
         let activeRouteKey = null, routeLayers = [], airportMarkers = [], selectedAirport = null, renderedRouteObjects = [];
         
-        /* 独立解耦的抽屉动效与按键高亮控制 */
+        /* 独立且极其丝滑的手势与悬停抽屉系统 */
         const uiContainer = document.getElementById('ui-container');
         if (window.innerWidth > 768) {
-            document.getElementById('desktop-trigger').addEventListener('mouseenter', () => uiContainer.classList.add('drawers-open'));
+            // PC：鼠标移动到透明拉手上展开，离开大框收起
+            const pcHandle = document.getElementById('desktop-handle');
+            pcHandle.addEventListener('mouseenter', () => uiContainer.classList.add('drawers-open'));
             uiContainer.addEventListener('mouseleave', () => uiContainer.classList.remove('drawers-open'));
-        } else {
-            let touchStartY = 0;
-            const mobileArea = document.getElementById('mobile-trigger');
-            mobileArea.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, {passive: true});
-            mobileArea.addEventListener('touchend', e => {
-                let touchEndY = e.changedTouches[0].clientY;
-                if (touchStartY - touchEndY > 30) uiContainer.classList.add('drawers-open');
-                else if (touchEndY - touchStartY > 30) uiContainer.classList.remove('drawers-open');
-                else uiContainer.classList.toggle('drawers-open');
-            });
         }
+        
+        // 通用手势：长条滑动与点击支持
+        let swipeStartY = 0;
+        document.querySelectorAll('.drawer-handle-wrapper').forEach(handle => {
+            handle.addEventListener('click', () => uiContainer.classList.toggle('drawers-open'));
+            handle.addEventListener('touchstart', e => { swipeStartY = e.touches[0].clientY; }, {passive: true});
+            handle.addEventListener('touchend', e => {
+                if(!swipeStartY) return;
+                let deltaY = e.changedTouches[0].clientY - swipeStartY;
+                if (Math.abs(deltaY) > 20) {
+                    if (window.innerWidth <= 768) {
+                        if (deltaY < 0) uiContainer.classList.add('drawers-open');
+                        else uiContainer.classList.remove('drawers-open');
+                    } else {
+                        if (deltaY > 0) uiContainer.classList.add('drawers-open');
+                        else uiContainer.classList.remove('drawers-open');
+                    }
+                }
+                swipeStartY = 0;
+            });
+        });
         
         document.querySelectorAll('.icon-btn, .day-btn').forEach(btn => {
             btn.addEventListener('click', () => { btn.classList.toggle('active'); updateDisplay(); });
         });
         
         function hideInfoPanel() {
-            const panel = document.getElementById('info-panel');
-            panel.classList.remove('visible'); activeRouteKey = null; 
+            document.getElementById('info-panel').classList.remove('visible');
+            activeRouteKey = null; 
         }
         
         function formatSmartDateRange(dateStr) {
@@ -37097,7 +37112,11 @@
 
                 let flowHTML = `<div class="flight-flow">`;
                 for(let i = 0; i < flight.route.length; i++) {
-                    const aptFull = flight.route[i]; const [city, apt] = aptFull.split('/');
+                    const aptFull = flight.route[i]; 
+                    const parts = aptFull.split('/');
+                    const city = parts[0];
+                    const apt = parts[1] || '&nbsp;'; 
+                    
                     let arrTime = '--:--', depTime = '--:--', arrNote = '', depNote = '';
                     if (i > 0) { const p = flight.time_details[`${flight.route[i-1]}-${aptFull}`]; if (p) { arrTime = p.arr.replace('次日','+1'); arrNote = p.arr_note; } }
                     if (i < flight.route.length - 1) { const n = flight.time_details[`${aptFull}-${flight.route[i+1]}`]; if (n) { depTime = n.dep.replace('次日','+1'); depNote = n.dep_note; } }
@@ -37109,7 +37128,7 @@
                     let depHtml = depNote ? `<span style="position:relative;">${depContent}<span class="time-note-emoji right" data-tooltip="${depNote}">🪧</span></span>` : depContent;
 
                     let timeBlock = i === 0 ? `<div class="station-time">${depHtml}</div>` : (i === flight.route.length - 1 ? `<div class="station-time">${arrHtml}</div>` : `<div class="station-time-group"><span class="station-time">${arrHtml}</span><span class="station-time">${depHtml}</span></div>`);
-                    flowHTML += `<div class="segment-station"><div class="station-name">${city}</div><span class="sub-airport">${apt || ''}</span>${timeBlock}</div>`;
+                    flowHTML += `<div class="segment-station"><div class="station-name">${city}</div><span class="sub-airport">${apt}</span>${timeBlock}</div>`;
 
                     if (i < flight.route.length - 1) {
                         const isLegTicketable = flight.ticketable_segments.includes(`${aptFull}-${flight.route[i+1]}`);
@@ -37163,18 +37182,16 @@
         }
         
         function initializeControls() {
-            // A-Z 机场分组加载 (数据已内聚化)
             const groupedApt = {};
             airports.forEach(([name, lat, lng, letter]) => { const l = letter || 'O'; if(!groupedApt[l]) groupedApt[l] = []; groupedApt[l].push(name); });
             let aptHTML = '';
             Object.keys(groupedApt).sort().forEach(letter => {
                 aptHTML += `<div class="apt-group"><div class="apt-letter">${letter}</div><div class="apt-items">`;
-                groupedApt[letter].forEach(name => { aptHTML += `<button class="apt-item-btn" data-val="${name}">${name.split('/')[0]}</button>`; });
+                aptHTML += groupedApt[letter].map(name => `<button class="apt-item-btn" data-val="${name}">${name}</button>`).join('');
                 aptHTML += `</div></div>`;
             });
             document.getElementById('airport-dropdown').innerHTML = aptHTML;
             
-            // 机场选择与清空快捷交互
             const aptInputBtn = document.getElementById('airport-input-btn');
             const aptDrop = document.getElementById('airport-dropdown');
             aptInputBtn.addEventListener('click', (e) => {
@@ -37189,12 +37206,11 @@
             document.querySelectorAll('.apt-item-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation(); selectedAirport = btn.dataset.val;
-                    aptInputBtn.textContent = `✕ ${selectedAirport.split('/')[0]}`; aptInputBtn.classList.add('has-val', 'active');
+                    aptInputBtn.textContent = `✕ ${selectedAirport}`; aptInputBtn.classList.add('has-val', 'active');
                     aptDrop.classList.remove('show'); updateDisplay();
                 });
             });
             
-            // 航司网格与机型胶囊加载
             const airlines = new Set(), typeSizes = { '大型': new Set(), '中型': new Set(), '小型': new Set() };
             flights.forEach(f => { 
                 airlines.add(f.airline); 
@@ -37211,7 +37227,6 @@
                 grid.insertBefore(btn, document.querySelector('.aircraft-wrapper'));
             });
             
-            // 机型按大小分组逻辑
             let acHTML = '';
             ['大型', '中型', '小型'].forEach(size => {
                 if (typeSizes[size] && typeSizes[size].size > 0) {
@@ -37248,7 +37263,6 @@
                 });
             });
             
-            // 全局脱焦收起菜单
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('#airport-input-btn') && !e.target.closest('#airport-dropdown')) document.getElementById('airport-dropdown').classList.remove('show');
                 if (!e.target.closest('.aircraft-wrapper')) document.getElementById('aircraft-dropdown').classList.remove('show');
@@ -37296,7 +37310,7 @@
                     selectedAirport = selectedAirport === name ? null : name;
                     const aptInputBtn = document.getElementById('airport-input-btn');
                     if(selectedAirport) {
-                        aptInputBtn.textContent = `✕ ${selectedAirport.split('/')[0]}`; aptInputBtn.classList.add('has-val', 'active');
+                        aptInputBtn.textContent = `✕ ${selectedAirport}`; aptInputBtn.classList.add('has-val', 'active');
                     } else {
                         aptInputBtn.textContent = '选择机场...'; aptInputBtn.classList.remove('has-val', 'active');
                     }
@@ -37329,7 +37343,6 @@
         function isMappedFlightVisible(mappedInfo, filters) {
             const f = mappedInfo.flight;
             
-            // 【革命性解耦：默认全选拦截器】
             if (filters.days.length === 0 || !f.days.some(d => filters.days.includes(d))) return false;
             if (filters.airlines.length === 0 || !filters.airlines.includes(f.airline)) return false;
             if (filters.aircrafts.length === 0 || !f.aircraft_type.split('/').some(t => filters.aircrafts.includes(t.trim()))) return false;
