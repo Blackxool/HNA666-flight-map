@@ -293,7 +293,8 @@
         .date-ticks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; border-radius: 14px; }
         .date-tick { position: absolute; font-size: 10px; color: var(--text-primary); font-weight: 600; transform: translateX(-50%); line-height: 20px; white-space: nowrap; opacity: 0.8; }
         
-        .top-right-legend { position: fixed; top: max(20px, env(safe-area-inset-top)); right: 20px; z-index: 1000; display: flex; flex-direction: row; gap: 16px; pointer-events: none; }
+        .top-right-legend { position: fixed; top: max(20px, env(safe-area-inset-top)); right: 20px; z-index: 1000; display: flex; flex-direction: row; gap: 16px; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
+        .top-right-legend.hidden { opacity: 0; transform: translateY(-10px); pointer-events: none; }
         .legend-row { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 900; color: var(--text-primary); text-shadow: 0 2px 6px var(--background-secondary); }
         .legend-line { width: 26px; height: 3px; background: var(--legend-color); position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border-radius: 1.5px; }
         .legend-line::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 5px; height: 5px; border-top: 1.5px solid var(--route-arrow-color); border-right: 1.5px solid var(--route-arrow-color); }
@@ -29499,6 +29500,8 @@
         
         function hideInfoPanel() {
             document.getElementById('info-panel').classList.remove('visible'); activeRouteKey = null; 
+            const legend = document.querySelector('.top-right-legend');
+            if(legend) legend.classList.remove('hidden');
         }
         
         function formatSmartDateRange(dateStr) {
@@ -29519,6 +29522,8 @@
         flightsContainerEl.addEventListener('scroll', updateScrollFades); window.addEventListener('resize', updateScrollFades);
 
         function showInfoPanel(routeKey, dep, arr, matchingMappedFlights) {
+            const legend = document.querySelector('.top-right-legend');
+            if(legend) legend.classList.add('hidden');
             document.getElementById('panel-route-title').textContent = `${dep.split('/')[0]} ✈ ${arr.split('/')[0]}`;
             let html = '';
             
