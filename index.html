@@ -200,14 +200,11 @@
 
         /* 【主胶囊样式】 */
         .custom-attribution-pill {
-            background: var(--disclaimer-bg); /* 主页浅色模式下的透明背景 */
+            background: var(--disclaimer-bg);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(220, 220, 220, 0.6);
-            
-            /* 【圆角对齐关键 1】统一圆角 */
             border-radius: 18px; 
-            
             padding: 9px 20px;
             display: flex; 
             align-items: center; 
@@ -219,7 +216,6 @@
             line-height: 1;
         }
 
-        /* 统一链接颜色和加粗 */
         .custom-attribution-pill a, .inline-disclaimer-popup a {
             color: var(--primary-color);
             text-decoration: none;
@@ -229,23 +225,20 @@
             text-decoration: underline;
         }
 
-        /* 特殊文字样式 */
         .disclaimer-trigger-text {
             color: var(--text-primary);
             font-weight: 800;
             cursor: help;
         }
 
-        /* GitHub Logo */
         .github-mode-logo {
-            width: 15px; /* Logo 随字号放大 */
+            width: 15px; 
             height: 15px;
             vertical-align: text-bottom;
             transition: filter 0.3s ease;
         }
         @media (prefers-color-scheme: dark) {
             .github-mode-logo { filter: invert(1); }
-            /* 深色模式调整主胶囊背景 */
             .custom-attribution-pill { background: rgba(30, 30, 30, 0.3); }
         }
 
@@ -254,29 +247,22 @@
             position: absolute; 
             bottom: calc(100% + 10px); /* 在胶囊上方 10px 处弹出 */
             
-            /* 【左右边界关键】强制对齐父容器边缘 */
             left: 0;
             right: 0;
             width: auto; /* 宽度不随内容自适应，强制铺满父容器 */
             box-sizing: border-box; /* padding 不会撑大外框 */
-            
-            /* 深浅色模式自适应背景 (比胶囊稍暗/深一点以突出气泡) */
-            background: rgba(255,255,255,0.5);
+            background: var(--disclaimer-bg);
             backdrop-filter: blur(20px); 
             -webkit-backdrop-filter: blur(20px); 
-            border: 1px solid rgba(200, 200, 200, 0.5); 
-            
-            /* 【圆角对齐关键 2】统一圆角，与胶囊保持一致 */
+            border: 1px solid rgba(220, 220, 220, 0.6); 
             border-radius: 18px; 
-            
             padding: 14px 18px; 
             font-weight: normal; 
             color: var(--text-primary); 
             font-size: 10px;
             line-height: 1.6; 
             box-shadow: 0 12px 32px rgba(0,0,0,0.15); 
-            
-            /* 交互状态控制 */
+
             opacity: 0; 
             pointer-events: none; 
             transition: opacity 0.3s ease, transform 0.3s ease; 
@@ -288,8 +274,7 @@
         /* 深色模式下的弹出框背景调整 */
         @media (prefers-color-scheme: dark) {
             .inline-disclaimer-popup { 
-                background: rgba(20, 20, 20, 0.2);
-                border-color: rgba(60, 60, 60, 0.5);
+                background: rgba(30, 30, 30, 0.3);
             }
         }
 
@@ -303,7 +288,7 @@
 
         /* --- 中心交互区域（自动填满剩余的所有空间） --- */
         .main-area {
-            flex: 1; /* 吸干头部和尾部之外的所有空间 */
+            flex: 1;
             width: 100vw;
             display: flex;
             align-items: center;
@@ -484,7 +469,7 @@
             <div class="custom-attribution-pill-wrapper">
                 
                 <div class="custom-attribution-pill">
-                    <a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank" title="开源至 GitHub">
+                    <a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank" title="可以通过提交 GitHub Issue 联系作者">
                         <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" class="github-mode-logo">
                     </a>
                     | 
@@ -494,8 +479,9 @@
                 </div>
 
                 <div class="inline-disclaimer-popup">
-                    机场/机型等信息整理自公开数据，航班/航线信息仅供参考。<br>
-                    网站仅提供可视化查询，所涉及公司及标识均归各自所有者。<br>
+                机场/机型等信息整理自公开数据，航班/航线信息仅供参考。<br>
+                网站仅提供交互式地图，所涉及公司及标识均归各自所有者。<br>
+                非商业使用/传播/修改请注明来源。禁止未授权的商业使用。
                 </div>
             </div>
         </div>
