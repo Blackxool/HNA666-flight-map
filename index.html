@@ -13,7 +13,7 @@
             --color-pink: #CE6A85;
             --color-orange: #FF8C61;
             --color-blue: #4E598C;
-            --primary-color: #8E6289;
+            --primary-color: rgb(142, 98, 137);
             
             --bg-color: #f5ebe0;
             --text-primary: #1D1D1F;
@@ -78,6 +78,12 @@
             position: relative;
             touch-action: none; 
             overscroll-behavior: none; 
+            /* 禁用文字选中 */
+            -webkit-user-select: none; /* Safari/Chrome 等 WebKit 内核 */
+            -moz-user-select: none;    /* Firefox */
+            -ms-user-select: none;     /* IE/Edge */
+            user-select: none;         /* 标准语法 */
+            -webkit-touch-callout: none;
         }
 
         .bg-canvas {
