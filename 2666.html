@@ -29,7 +29,7 @@
             --route-arrow-color: #333333; 
             --active-btn-text: #222222;
             
-            --ui-width: 420px;
+            --ui-width: 360px;
             --fade-right: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%);
             --fade-left: linear-gradient(to left, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%);
         }
@@ -126,9 +126,9 @@
         .bg-orb { position: absolute; border-radius: 50%; filter: blur(35px); opacity: 0.65; }
         @media (prefers-color-scheme: dark) { .bg-orb { opacity: 0.45; filter: blur(45px); mix-blend-mode: screen; } }
         
-        .drawers-bg .orb-pink { background: #CE6A85; width: 160px; height: 160px; top: 10%; left: 10%; animation: float1 14s infinite alternate ease-in-out; }
-        .drawers-bg .orb-orange { background: #FF8C61; width: 140px; height: 140px; bottom: 10%; right: 10%; animation: float2 16s infinite alternate ease-in-out; }
-        .drawers-bg .orb-blue { background: #4E598C; width: 180px; height: 180px; top: 40%; left: 35%; animation: float3 18s infinite alternate ease-in-out; }
+        .drawers-bg .orb-pink { background: #CE6A85; width: 130px; height: 130px; top: 10%; left: 10%; animation: float1 14s infinite alternate ease-in-out; }
+        .drawers-bg .orb-orange { background: #FF8C61; width: 110px; height: 110px; bottom: 10%; right: 10%; animation: float2 16s infinite alternate ease-in-out; }
+        .drawers-bg .orb-blue { background: #4E598C; width: 150px; height: 150px; top: 40%; left: 35%; animation: float3 18s infinite alternate ease-in-out; }
         
         @keyframes float1 { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(25px, 20px) scale(1.1); } }
         @keyframes float2 { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-20px, -25px) scale(1.05); } }
@@ -197,15 +197,14 @@
 
         .icon-btn { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: transparent; }
         .icon-btn:not(.active) { filter: saturate(3.7%); opacity: 0.65; }
-        .airline-btn { 
-            width: 38px; height: 38px; border-radius: 19px; display: flex; align-items: center; justify-content: center; 
-            padding: 4px; overflow: visible; background: transparent !important; border: none !important; box-shadow: none !important; transition: transform 0.3s, filter 0.3s;
-        }
+        .airline-btn { width: 38px; height: 38px; border-radius: 19px; display: flex; align-items: center; justify-content: center; padding: 4px; overflow: visible; background: transparent !important; border: none !important; box-shadow: none !important; transition: transform 0.3s, filter 0.3s, opacity 0.3s; }
         .airline-btn img { width: 100%; height: 100%; object-fit: contain; }
-        .airline-btn:not(.active) { filter: saturate(37%) opacity(0.65); }
-        .airline-btn:hover { transform: translateY(-4px) scale(1.15) !important; z-index: 10; filter: drop-shadow(0 6px 10px var(--shadow-medium)) drop-shadow(0 0 12px var(--glow-color)) brightness(1.1) !important; }
-        .airline-btn.active { filter: none; transform: translateY(-1px); filter: drop-shadow(0 2px 6px var(--shadow-medium)) drop-shadow(0 0 8px var(--glow-color)); }
-
+        .airline-btn:not(.active) { filter: saturate(37%); opacity: 0.65; }
+        .airline-btn:not(.active):hover { transform: translateY(-4px) scale(1.15) !important; z-index: 10; filter: saturate(37%) drop-shadow(0 4px 8px var(--shadow-medium)) !important; opacity: 0.75; }
+        .airline-btn.active { filter: drop-shadow(0 2px 6px var(--shadow-medium)) drop-shadow(0 0 8px var(--glow-color)); transform: translateY(-1px); opacity: 1; }
+        .airline-btn.active:hover { transform: translateY(-4px) scale(1.15) !important; z-index: 10; filter: drop-shadow(0 6px 10px var(--shadow-medium)) drop-shadow(0 0 12px var(--glow-color)) brightness(1.1) !important; }
+        .airline-btn:active { transform: translateY(0) scale(0.85) !important; transition: transform 0.05s !important; filter: brightness(0.9) !important; }
+        
         /* ================= SPA 级互斥面板路由层 ================= */
         .drawers-wrapper { 
             position: relative; z-index: 80; max-height: 0; overflow: hidden; 
@@ -229,53 +228,61 @@
         .days-container { display: grid; grid-template-columns: repeat(7, 1fr); justify-items: center; gap: 8px; }
         .day-btn { width: 38px; height: 38px; border-radius: 19px; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; }
         .airlines-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: center; justify-items: center; grid-auto-flow: row dense; }
-        .aircraft-wrapper { grid-area: 2 / 3 / 3 / 6; width: 100%; }
+        .aircraft-wrapper { grid-area: 2 / 3 / 3 / 6; width: 130px; justify-self: center; }
         .aircraft-capsule-btn { width: 100%; height: 38px; border-radius: 19px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;}
 
-        /* 1. 极致美学：机场水印排版 */
+        /* 1. 机场水印排版 */
         .apt-group { 
             position: relative; display: flex; align-items: center; 
-            padding: 10px 0 10px 10px; /* 极小左边距，制造完美重叠 */
+            padding: 10px 0;
             min-height: 55px; border-bottom: 1px dashed var(--border-color); 
         }
         .apt-group:last-child { border-bottom: none; }
         .apt-letter { 
-            position: absolute; left: -10px; top: 50%; transform: translateY(-50%); 
+            position: absolute; 
+            right: 10px;
+            top: 50%; transform: translateY(-50%); 
             font-size: 80px; font-weight: 900; color: var(--text-primary); 
             opacity: 0.15; z-index: 0; pointer-events: none; line-height: 1; font-style: italic;
         }
         @media (prefers-color-scheme: dark) { .apt-letter, .ac-bg-letter { opacity: 0.25; } }
         .apt-items { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
-        .apt-item-btn { padding: 0 12px; height: 24px; border-radius: 12px; font-size: 11px; color: var(--text-primary); font-weight: 800;
-        }
+        .apt-item-btn { padding: 0 12px; height: 24px; border-radius: 12px; font-size: 11px; color: var(--text-primary) !important; font-weight: 800 !important; }
         
-        /* 2. 机型神级排版：大中小同宽完美两行 */
+        /* 2. 大中小等大3行，自适应间距 */
         .ac-master-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 3fr) minmax(0, 6fr) minmax(0, 1fr); /* 极致比例 */
-            gap: 12px; width: 100%;
+            display: flex; /* 核心修改：改用 flex 布局 */
+            justify-content: space-between; /* 核心修改：让大、中、小三个区块之间的空白自动填满伸展 */
+            width: 100%;
         }
         .ac-col { position: relative; display: flex; flex-direction: column; gap: 6px; }
+        
         .ac-bg-letter {
-            position: absolute; left: -8px; top: 50%; transform: translateY(-50%); 
+            position: absolute; 
+            left: -10px;
+            top: 50%; transform: translateY(-50%); 
             font-size: 64px; font-weight: 900; color: var(--text-primary); 
             opacity: 0.15; z-index: 0; pointer-events: none; line-height: 1; font-style: italic;
         }
+        
         .ac-col-header { position: relative; z-index: 1; display: flex; justify-content: flex-end; align-items: center; padding-right: 2px;}
         .ac-select-all {
-            font-size: 8.5px; font-weight: 700; color: var(--primary-color); cursor: pointer; text-align: center;
-            padding: 2px 6px; border-radius: 10px; border: 1px solid var(--glass-border); transition: 0.2s; background: transparent;
+            font-size: 8px; font-weight: 700; color: var(--primary-color); cursor: pointer; text-align: center;
+            padding: 2px 2px; border-radius: 10px; border: 1px solid var(--glass-border); transition: 0.2s; background: transparent;
         }
-        .ac-select-all:hover { transform: translateY(-2px); border-color: var(--primary-color); filter: brightness(var(--hover-brightness)); box-shadow: 0 4px 12px var(--shadow-light), 0 0 8px var(--glow-color); }
+        .ac-select-all:hover { border-color: var(--primary-color); filter: brightness(var(--hover-brightness)); box-shadow: 0 4px 12px var(--shadow-light), 0 0 8px var(--glow-color); }
         
-        /* 蛇形填充强制两行法则 */
         .ac-items-grid {
             position: relative; z-index: 1; display: grid; 
-            grid-template-rows: repeat(2, 1fr); grid-auto-columns: 1fr; grid-auto-flow: column; gap: 6px 4px;
+            grid-template-rows: repeat(2, 1fr); 
+            grid-auto-columns: 30px;
+            grid-auto-flow: column; 
+            gap: 6px 6px; 
         }
+        
         .ac-type-btn { 
             height: 20px; border-radius: 10px; font-size: 9.5px; font-weight: 700; 
-            text-align: center; width: 100%; padding: 0 2px;
+            text-align: center; width: 100%; padding: 0; /* padding清零，宽度完全由上方的 58px 接管 */
             display: flex; align-items: center; justify-content: center; letter-spacing: 0px; white-space: nowrap;
         }
         
@@ -401,14 +408,14 @@
                     </div>
                 </div>
                 <div class="days-container">
-                    <button class="day-btn glow-btn active" data-val="1">一</button><button class="day-btn glow-btn active" data-val="2">二</button>
-                    <button class="day-btn glow-btn active" data-val="3">三</button><button class="day-btn glow-btn active" data-val="4">四</button>
-                    <button class="day-btn glow-btn active" data-val="5">五</button><button class="day-btn glow-btn active" data-val="6">六</button>
-                    <button class="day-btn glow-btn active" data-val="7">日</button>
+                    <button class="day-btn glow-btn" data-val="1">一</button><button class="day-btn glow-btn" data-val="2">二</button>
+                    <button class="day-btn glow-btn" data-val="3">三</button><button class="day-btn glow-btn" data-val="4">四</button>
+                    <button class="day-btn glow-btn" data-val="5">五</button><button class="day-btn glow-btn" data-val="6">六</button>
+                    <button class="day-btn glow-btn" data-val="7">日</button>
                 </div>
                 <div class="airlines-grid" id="airlines-grid">
                     <div class="aircraft-wrapper">
-                        <button id="aircraft-toggle-btn" class="aircraft-capsule-btn glow-btn active">机型选择 ✈️</button>
+                        <button id="aircraft-toggle-btn" class="aircraft-capsule-btn glow-btn active">选择机型 ✈️</button>
                     </div>
                 </div>
             </div>
@@ -432,7 +439,7 @@
     </div>
     
     <div class="custom-attribution-float">
-        <a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank" title="开源至 GitHub">
+        <a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank" title="可以通过提交 GitHub Issue 联系作者">
             <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" class="github-mode-logo">
         </a>
         | <span>航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理</span>
@@ -440,7 +447,8 @@
         | <span class="inline-disclaimer-wrapper">免责申明
             <div class="inline-disclaimer-popup">
                 机场/机型等信息整理自公开数据，航班/航线信息仅供参考。<br>
-                网站仅提供可视化查询，所涉及公司及标识均归各自所有者。
+                网站仅提供交互式地图，所涉及公司及标识均归各自所有者。<br>
+                非商业使用/传播/修改请注明来源。禁止未授权的商业使用。
             </div>
         </span>
     </div>
@@ -3260,7 +3268,35 @@
             4,
             6
         ],
-        "date_range": "2026/04/02-2026/05/30",
+        "date_range": "2026/04/02-2026/04/09",
+        "route": [
+            "泸州/云龙",
+            "大理/凤仪"
+        ],
+        "ticketable_segments": [
+            "泸州/云龙-大理/凤仪"
+        ],
+        "time_details": {
+            "泸州/云龙-大理/凤仪": {
+                "dep": "21:20",
+                "dep_note": null,
+                "arr": "22:35",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "B737",
+        "aircraft_size": "中型",
+        "is_morning": false
+    },
+    {
+        "airline": "祥鹏航空",
+        "flight_number": "8L9744",
+        "days": [
+            2,
+            4,
+            6
+        ],
+        "date_range": "2026/04/11-2026/05/30",
         "route": [
             "济南/遥墙",
             "泸州/云龙",
@@ -3280,9 +3316,9 @@
             },
             "泸州/云龙-大理/凤仪": {
                 "dep": "23:05",
-                "dep_note": "21:20",
+                "dep_note": null,
                 "arr": "00:20",
-                "arr_note": "22:35"
+                "arr_note": null
             }
         },
         "aircraft_type": "B737",
@@ -9480,11 +9516,37 @@
         "airline": "天津航空",
         "flight_number": "GS6565",
         "days": [
+            6
+        ],
+        "date_range": "2026/04/04-2026/04/04",
+        "route": [
+            "海口/美兰",
+            "梅州/梅县"
+        ],
+        "ticketable_segments": [
+            "海口/美兰-梅州/梅县"
+        ],
+        "time_details": {
+            "海口/美兰-梅州/梅县": {
+                "dep": "08:10",
+                "dep_note": null,
+                "arr": "09:45",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "E190",
+        "aircraft_size": "小型",
+        "is_morning": true
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS6565",
+        "days": [
             2,
             4,
             6
         ],
-        "date_range": "2026/04/04-2026/05/30",
+        "date_range": "2026/04/07-2026/05/30",
         "route": [
             "海口/美兰",
             "梅州/梅县",
@@ -9896,6 +9958,34 @@
         "airline": "天津航空",
         "flight_number": "GS6601",
         "days": [
+            3,
+            4,
+            7
+        ],
+        "date_range": "2026/04/01-2026/04/05",
+        "route": [
+            "重庆/江北",
+            "石家庄/正定"
+        ],
+        "ticketable_segments": [
+            "重庆/江北-石家庄/正定"
+        ],
+        "time_details": {
+            "重庆/江北-石家庄/正定": {
+                "dep": "08:25",
+                "dep_note": null,
+                "arr": "10:35",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "A320",
+        "aircraft_size": "中型",
+        "is_morning": true
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS6601",
+        "days": [
             1,
             2,
             3,
@@ -9904,7 +9994,7 @@
             6,
             7
         ],
-        "date_range": "2026/04/01-2026/04/30",
+        "date_range": "2026/04/03-2026/04/30",
         "route": [
             "重庆/江北",
             "石家庄/正定",
@@ -10767,15 +10857,11 @@
         "airline": "天津航空",
         "flight_number": "GS7458",
         "days": [
-            1,
             2,
-            3,
             4,
-            5,
-            6,
-            7
+            6
         ],
-        "date_range": "2026/04/01-2026/04/30",
+        "date_range": "2026/04/02-2026/04/30",
         "route": [
             "大连/周水子",
             "天津/滨海",
@@ -10794,10 +10880,39 @@
                 "arr_note": null
             },
             "天津/滨海-榆林/榆阳": {
-                "dep": "21:15",
-                "dep_note": "21:35",
+                "dep": "21:35",
+                "dep_note": null,
                 "arr": "23:20",
-                "arr_note": "22:55"
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "E190/E195",
+        "aircraft_size": "小型",
+        "is_morning": false
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS7458",
+        "days": [
+            1,
+            3,
+            5,
+            7
+        ],
+        "date_range": "2026/04/01-2026/04/29",
+        "route": [
+            "天津/滨海",
+            "榆林/榆阳"
+        ],
+        "ticketable_segments": [
+            "天津/滨海-榆林/榆阳"
+        ],
+        "time_details": {
+            "天津/滨海-榆林/榆阳": {
+                "dep": "21:15",
+                "dep_note": null,
+                "arr": "22:55",
+                "arr_note": null
             }
         },
         "aircraft_type": "E190/E195",
@@ -10979,14 +11094,39 @@
         "flight_number": "GS7502",
         "days": [
             1,
-            2,
             3,
-            4,
             5,
-            6,
             7
         ],
         "date_range": "2026/04/29-2026/05/31",
+        "route": [
+            "西宁/曹家堡",
+            "乌鲁木齐/天山"
+        ],
+        "ticketable_segments": [
+            "西宁/曹家堡-乌鲁木齐/天山"
+        ],
+        "time_details": {
+            "西宁/曹家堡-乌鲁木齐/天山": {
+                "dep": "21:20",
+                "dep_note": null,
+                "arr": "23:45",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "A320",
+        "aircraft_size": "中型",
+        "is_morning": false
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS7502",
+        "days": [
+            2,
+            4,
+            6
+        ],
+        "date_range": "2026/04/30-2026/05/30",
         "route": [
             "长沙/黄花",
             "西宁/曹家堡",
@@ -11005,10 +11145,10 @@
                 "arr_note": null
             },
             "西宁/曹家堡-乌鲁木齐/天山": {
-                "dep": "21:20",
-                "dep_note": "22:35",
+                "dep": "22:35",
+                "dep_note": null,
                 "arr": "00:50",
-                "arr_note": "23:45"
+                "arr_note": null
             }
         },
         "aircraft_type": "A320",
@@ -13840,12 +13980,10 @@
         "airline": "天津航空",
         "flight_number": "GS7828",
         "days": [
-            1,
-            3,
             5,
             7
         ],
-        "date_range": "2026/04/01-2026/05/31",
+        "date_range": "2026/04/03-2026/05/31",
         "route": [
             "海口/美兰",
             "衡阳/南岳",
@@ -13865,7 +14003,7 @@
             },
             "衡阳/南岳-天津/滨海": {
                 "dep": "21:25",
-                "dep_note": "21:10",
+                "dep_note": null,
                 "arr": "23:50",
                 "arr_note": null
             }
@@ -13873,6 +14011,61 @@
         "aircraft_type": "E190/E195",
         "aircraft_size": "小型",
         "is_morning": false
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS7828",
+        "days": [
+            1,
+            3
+        ],
+        "date_range": "2026/04/01-2026/05/27",
+        "route": [
+            "衡阳/南岳",
+            "天津/滨海"
+        ],
+        "ticketable_segments": [
+            "衡阳/南岳-天津/滨海"
+        ],
+        "time_details": {
+            "衡阳/南岳-天津/滨海": {
+                "dep": "21:10",
+                "dep_note": null,
+                "arr": "23:50",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "E190/E195",
+        "aircraft_size": "小型",
+        "is_morning": false
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS7829",
+        "days": [
+            1,
+            5,
+            7
+        ],
+        "date_range": "2026/05/11-2026/05/11 & 2026/05/24-2026/05/29",
+        "route": [
+            "天津/滨海",
+            "揭阳/潮汕"
+        ],
+        "ticketable_segments": [
+            "天津/滨海-揭阳/潮汕"
+        ],
+        "time_details": {
+            "天津/滨海-揭阳/潮汕": {
+                "dep": "06:35",
+                "dep_note": null,
+                "arr": "09:25",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "A320",
+        "aircraft_size": "中型",
+        "is_morning": true
     },
     {
         "airline": "天津航空",
@@ -13945,11 +14138,8 @@
         "flight_number": "GS7832",
         "days": [
             1,
-            2,
             3,
-            4,
             5,
-            6,
             7
         ],
         "date_range": "2026/04/01-2026/05/31",
@@ -13972,9 +14162,37 @@
             },
             "呼和浩特/白塔-天津/滨海": {
                 "dep": "22:50",
-                "dep_note": "20:20",
+                "dep_note": null,
                 "arr": "00:25",
-                "arr_note": "21:50"
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "E190/E195",
+        "aircraft_size": "小型",
+        "is_morning": false
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS7832",
+        "days": [
+            2,
+            4,
+            6
+        ],
+        "date_range": "2026/04/02-2026/05/30",
+        "route": [
+            "呼和浩特/白塔",
+            "天津/滨海"
+        ],
+        "ticketable_segments": [
+            "呼和浩特/白塔-天津/滨海"
+        ],
+        "time_details": {
+            "呼和浩特/白塔-天津/滨海": {
+                "dep": "20:20",
+                "dep_note": null,
+                "arr": "21:50",
+                "arr_note": null
             }
         },
         "aircraft_type": "E190/E195",
@@ -14389,6 +14607,32 @@
         "airline": "天津航空",
         "flight_number": "GS7902",
         "days": [
+            4
+        ],
+        "date_range": "2026/04/02-2026/04/02",
+        "route": [
+            "贵阳/龙洞堡",
+            "西安/咸阳"
+        ],
+        "ticketable_segments": [
+            "贵阳/龙洞堡-西安/咸阳"
+        ],
+        "time_details": {
+            "贵阳/龙洞堡-西安/咸阳": {
+                "dep": "20:25",
+                "dep_note": null,
+                "arr": "22:10",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "E195",
+        "aircraft_size": "小型",
+        "is_morning": false
+    },
+    {
+        "airline": "天津航空",
+        "flight_number": "GS7902",
+        "days": [
             1,
             2,
             3,
@@ -14422,8 +14666,8 @@
                 "arr_note": null
             }
         },
-        "aircraft_type": "A320/A321/E195",
-        "aircraft_size": "中/小型",
+        "aircraft_type": "A320/A321",
+        "aircraft_size": "中型",
         "is_morning": false
     },
     {
@@ -16463,7 +16707,36 @@
             5,
             7
         ],
-        "date_range": "2026/04/01-2026/05/31",
+        "date_range": "2026/04/01-2026/04/08",
+        "route": [
+            "十堰/武当山",
+            "南宁/吴圩"
+        ],
+        "ticketable_segments": [
+            "十堰/武当山-南宁/吴圩"
+        ],
+        "time_details": {
+            "十堰/武当山-南宁/吴圩": {
+                "dep": "20:40",
+                "dep_note": null,
+                "arr": "23:00",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "E190",
+        "aircraft_size": "小型",
+        "is_morning": false
+    },
+    {
+        "airline": "北部湾航空",
+        "flight_number": "GX8919",
+        "days": [
+            1,
+            3,
+            5,
+            7
+        ],
+        "date_range": "2026/04/10-2026/05/31",
         "route": [
             "济南/遥墙",
             "十堰/武当山",
@@ -16483,13 +16756,13 @@
             },
             "十堰/武当山-南宁/吴圩": {
                 "dep": "22:00",
-                "dep_note": "20:40",
+                "dep_note": null,
                 "arr": "00:10",
-                "arr_note": "23:00"
+                "arr_note": null
             }
         },
-        "aircraft_type": "A20N/A320/E190",
-        "aircraft_size": "中/小型",
+        "aircraft_type": "A20N/A320",
+        "aircraft_size": "中型",
         "is_morning": false
     },
     {
@@ -23388,6 +23661,32 @@
         "aircraft_type": "A333/B738",
         "aircraft_size": "大/中型",
         "is_morning": false
+    },
+    {
+        "airline": "海南航空",
+        "flight_number": "HU7449",
+        "days": [
+            2
+        ],
+        "date_range": "2026/04/21-2026/04/21",
+        "route": [
+            "兰州/中川",
+            "南充/高坪"
+        ],
+        "ticketable_segments": [
+            "兰州/中川-南充/高坪"
+        ],
+        "time_details": {
+            "兰州/中川-南充/高坪": {
+                "dep": "09:00",
+                "dep_note": null,
+                "arr": "10:45",
+                "arr_note": null
+            }
+        },
+        "aircraft_type": "B738",
+        "aircraft_size": "中型",
+        "is_morning": true
     },
     {
         "airline": "海南航空",
@@ -38905,8 +39204,7 @@
             });
         }
         const generatedRoutes = generatePhysicalRoutes(flights);
-
-        const map = L.map('map', { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([35.5, 103], 4.5);
+        const map = L.map('map', { oomControl: false, attributionControl: false, preferCanvas: true, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 120 }).setView([35.5, 103], 4.5);
         let currentTileLayer = null;
         let activeRouteKey = null, routeLayers = [], airportMarkers = [], selectedAirport = null, renderedRouteObjects = [];
         let isAppReady = false; 
@@ -39098,7 +39396,7 @@
                 const btn = e.target.closest('.apt-item-btn');
                 if(btn) {
                     e.stopPropagation(); selectedAirport = btn.dataset.val;
-                    aptInputBtn.textContent = `✕ ${selectedAirport}`; aptInputBtn.classList.add('has-val');
+                    aptInputBtn.textContent = `${selectedAirport}`; aptInputBtn.classList.add('has-val');
                     uiContainer.classList.remove('drawers-open'); currentPanel = ''; // 收回抽屉
                     if(isAppReady) updateDisplay();
                 }
@@ -39274,7 +39572,7 @@
                     L.DomEvent.stopPropagation(e); if (Date.now() - m.lastClickTime < 400) return; m.lastClickTime = Date.now();
                     selectedAirport = selectedAirport === name ? null : name;
                     const aptInputBtn = document.getElementById('airport-input-btn');
-                    if(selectedAirport) { aptInputBtn.textContent = `✕ ${selectedAirport}`; aptInputBtn.classList.add('has-val'); } else { aptInputBtn.textContent = '选择机场...'; aptInputBtn.classList.remove('has-val'); }
+                    if(selectedAirport) { aptInputBtn.textContent = `${selectedAirport}`; aptInputBtn.classList.add('has-val'); } else { aptInputBtn.textContent = '选择机场...'; aptInputBtn.classList.remove('has-val'); }
                     if(isAppReady) updateDisplay();
                 });
                 m.on('mouseover', () => { document.getElementById(`apt-marker-${idx}`).classList.remove('collapsed'); }); 
@@ -39296,7 +39594,7 @@
         
         function isMappedFlightVisible(mappedInfo, filters) {
             const f = mappedInfo.flight;
-            if (filters.days.length === 0 || !f.days.some(d => filters.days.includes(d))) return false;
+            if (filters.days.length > 0 && !f.days.some(d => filters.days.includes(d))) return false;
             if (filters.airlines.length === 0 || !filters.airlines.includes(f.airline)) return false;
             if (filters.aircrafts.length === 0 || !f.aircraft_type.split('/').some(t => filters.aircrafts.includes(t.trim()))) return false;
             if (filters.times.length === 0) return false;
