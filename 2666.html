@@ -42209,14 +42209,14 @@
             return generatedRoutes.find(route => route.route_key === routeKey) || null;
         }
 
-        function getReversePanelFilters(filters) {
+        function getInfoPanelFilters(filters) {
             if (!filters.airport) return filters;
             return { ...filters, dirs: ['departure', 'arrival'] };
         }
 
-        function getVisibleMappedFlightsForRoute(route, filters, options = {}) {
+        function getVisibleMappedFlightsForRoute(route, filters) {
             if (!route) return [];
-            const effectiveFilters = options.allowReverseDirection ? getReversePanelFilters(filters) : filters;
+            const effectiveFilters = getInfoPanelFilters(filters);
             return route.mapped_flights.filter(mappedInfo => isMappedFlightVisible(mappedInfo, effectiveFilters));
         }
 
@@ -42229,7 +42229,7 @@
             const filters = getCurrentFilters();
             const forwardFlights = getVisibleMappedFlightsForRoute(baseRoute, filters);
             const reverseRoute = getRouteByKey(`${baseRoute.arrival}-${baseRoute.departure}`);
-            const reverseFlights = getVisibleMappedFlightsForRoute(reverseRoute, filters, { allowReverseDirection: true });
+            const reverseFlights = getVisibleMappedFlightsForRoute(reverseRoute, filters);
 
             if (currentDirection === 'backward') {
                 if (reverseRoute && reverseFlights.length > 0) {
@@ -42271,7 +42271,7 @@
             const { canSwap = false } = options;
             const legend = document.querySelector('.top-right-legend');
             if(legend) legend.classList.add('hidden');
-            document.getElementById('panel-route-title').textContent = `${dep.split('/')[0]} → ${arr.split('/')[0]}`;
+            document.getElementById('panel-route-title').textContent = `${dep.split('/')[0]} ✈ ${arr.split('/')[0]}`;
             const swapBtn = document.getElementById('route-swap-btn');
 
             if (canSwap) {
