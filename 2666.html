@@ -325,9 +325,45 @@
 
         #info-panel { position: absolute; bottom: 0; z-index: 1010; width: 100vw; display: none; flex-direction: column; background: transparent; pointer-events: none; padding: 0; box-sizing: border-box; }
         #info-panel.visible { display: flex; opacity: 1; }
-        .route-info-header { margin-bottom: 0px; padding: 0 20px; position: relative; z-index: 10; }
-        .route-info-header h4 { margin: 0; font-size: 20px; font-weight: 900; color: var(--text-primary); text-shadow: 0 2px 10px var(--background-primary), 0 0 5px var(--background-primary); }
+        .route-info-header { margin-bottom: 0px; padding: 0 20px; position: relative; z-index: 10; pointer-events: auto; display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
+        .route-info-header h4 { margin: 0; font-size: 20px; font-weight: 900; color: var(--text-primary); text-shadow: 0 2px 10px var(--background-primary), 0 0 5px var(--background-primary); flex: 0 1 auto; }
         @media (prefers-color-scheme: dark) { .route-info-header h4 { text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.8); } }
+        .swap-btn {
+            position: static;
+            height: 30px; border-radius: 999px;
+            padding: 0 12px;
+            background: var(--background-secondary); border: 1px solid var(--glass-border);
+            color: var(--active-btn-text); font-size: 12px; font-weight: 800; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            white-space: nowrap;
+            pointer-events: auto;
+            transition: transform 0.22s, filter 0.22s, box-shadow 0.22s, opacity 0.22s, border-color 0.22s, background-color 0.22s;
+            backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter);
+            box-shadow: 0 6px 16px var(--shadow-medium);
+        }
+        .swap-btn:hover {
+            transform: translateY(-1px);
+            border-color: var(--active-glass-border);
+            filter: brightness(var(--hover-brightness));
+            box-shadow: 0 10px 22px var(--shadow-medium), 0 0 12px var(--glow-color);
+        }
+        .swap-btn:active { transform: translateY(0) scale(0.98); }
+        .swap-btn.disabled {
+            opacity: 1; cursor: not-allowed;
+            color: rgba(15, 5, 8, 0.68);
+            background: rgba(255, 255, 255, 0.72);
+            border-color: rgba(141, 125, 129, 0.3);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+        .swap-btn.disabled:hover { transform: none; filter: none; border-color: var(--glass-border); box-shadow: none; }
+        @media (prefers-color-scheme: dark) {
+            .swap-btn.disabled {
+                color: rgba(255, 255, 255, 0.72);
+                background: rgba(20, 15, 18, 0.72);
+                border-color: rgba(255, 255, 255, 0.28);
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.22);
+            }
+        }
         
         .flights-container { display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scroll-behavior: smooth; gap: 16px; width: 100vw; pointer-events: auto; align-items: start; position: relative; padding: 16px 0 25px 0; margin: 0; box-sizing: border-box; }
         .flights-container::-webkit-scrollbar { height: 4px; }
@@ -456,7 +492,7 @@
     </div>
     
     <div id="info-panel">
-        <div class="route-info-header"><h4 id="panel-route-title"></h4></div>
+        <div class="route-info-header"><h4 id="panel-route-title"></h4><button id="route-swap-btn" class="swap-btn" title="查看回程">查看回程</button></div>
         <div style="position: relative; width: 100%;">
             <div class="scroll-fade-left" id="fade-left"></div>
             <div class="flights-container" id="info-content"></div>
@@ -42088,7 +42124,7 @@
         const generatedRoutes = generatePhysicalRoutes(flights);
         const map = L.map('map', { oomControl: false, attributionControl: false, preferCanvas: true, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 120 }).setView([35.5, 103], 4.5);
         let currentTileLayer = null;
-        let activeRouteKey = null, routeLayers = [], airportMarkers = [], selectedAirport = null, renderedRouteObjects = [];
+        let activeRouteKey = null, currentDirection = 'forward', routeLayers = [], airportMarkers = [], selectedAirport = null, renderedRouteObjects = [];
         let isAppReady = false; 
 
         function updateMapTheme(e) {
@@ -42162,9 +42198,56 @@
         });
         
         function hideInfoPanel() {
-            document.getElementById('info-panel').classList.remove('visible'); activeRouteKey = null; 
+            document.getElementById('info-panel').classList.remove('visible'); activeRouteKey = null; currentDirection = 'forward';
             const legend = document.querySelector('.top-right-legend');
             if(legend) legend.classList.remove('hidden');
+            const swapBtn = document.getElementById('route-swap-btn');
+            if(swapBtn) { swapBtn.classList.remove('disabled'); swapBtn.textContent = '查看回程'; swapBtn.title = '查看回程'; swapBtn.onclick = null; }
+        }
+
+        function getRouteByKey(routeKey) {
+            return generatedRoutes.find(route => route.route_key === routeKey) || null;
+        }
+
+        function getInfoPanelFilters(filters) {
+            if (!filters.airport) return filters;
+            return { ...filters, dirs: ['departure', 'arrival'] };
+        }
+
+        function getVisibleMappedFlightsForRoute(route, filters) {
+            if (!route) return [];
+            const effectiveFilters = getInfoPanelFilters(filters);
+            return route.mapped_flights.filter(mappedInfo => isMappedFlightVisible(mappedInfo, effectiveFilters));
+        }
+
+        function syncInfoPanel() {
+            if (!activeRouteKey) { hideInfoPanel(); return; }
+
+            const baseRoute = getRouteByKey(activeRouteKey);
+            if (!baseRoute) { hideInfoPanel(); return; }
+
+            const filters = getCurrentFilters();
+            const forwardFlights = getVisibleMappedFlightsForRoute(baseRoute, filters);
+            const reverseRoute = getRouteByKey(`${baseRoute.arrival}-${baseRoute.departure}`);
+            const reverseFlights = getVisibleMappedFlightsForRoute(reverseRoute, filters);
+
+            if (currentDirection === 'backward') {
+                if (reverseRoute && reverseFlights.length > 0) {
+                    showInfoPanel(reverseRoute.route_key, reverseRoute.departure, reverseRoute.arrival, reverseFlights, { canSwap: forwardFlights.length > 0 });
+                } else if (forwardFlights.length > 0) {
+                    currentDirection = 'forward';
+                    showInfoPanel(baseRoute.route_key, baseRoute.departure, baseRoute.arrival, forwardFlights, { canSwap: reverseFlights.length > 0 });
+                } else {
+                    hideInfoPanel();
+                }
+                return;
+            }
+
+            if (forwardFlights.length > 0) {
+                showInfoPanel(baseRoute.route_key, baseRoute.departure, baseRoute.arrival, forwardFlights, { canSwap: reverseFlights.length > 0 });
+            } else {
+                hideInfoPanel();
+            }
         }
         
         function formatSmartDateRange(dateStr) {
@@ -42184,10 +42267,31 @@
         }
         flightsContainerEl.addEventListener('scroll', updateScrollFades); window.addEventListener('resize', updateScrollFades);
 
-        function showInfoPanel(routeKey, dep, arr, matchingMappedFlights) {
+        function showInfoPanel(routeKey, dep, arr, matchingMappedFlights, options = {}) {
+            const { canSwap = false } = options;
             const legend = document.querySelector('.top-right-legend');
             if(legend) legend.classList.add('hidden');
             document.getElementById('panel-route-title').textContent = `${dep.split('/')[0]} ✈ ${arr.split('/')[0]}`;
+            const swapBtn = document.getElementById('route-swap-btn');
+
+            if (canSwap) {
+                swapBtn.classList.remove('disabled');
+                swapBtn.textContent = currentDirection === 'backward' ? '查看去程' : '查看回程';
+                swapBtn.title = swapBtn.textContent;
+                swapBtn.onclick = event => {
+                    event.stopPropagation();
+                    currentDirection = currentDirection === 'forward' ? 'backward' : 'forward';
+                    syncInfoPanel();
+                };
+            } else {
+                swapBtn.classList.add('disabled');
+                swapBtn.textContent = '暂无回程';
+                swapBtn.title = '暂无回程';
+                swapBtn.onclick = event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                };
+            }
             let html = '';
             
             const largeAc = ['A332', 'A333', 'A339', 'B788', 'B789'];
@@ -42526,7 +42630,7 @@ function updateAirportLabels() {
                     const arrowOffsetRandomness = 0.913; const randomOffset = 25 + (Math.random() * arrowOffsetRandomness * 120);
                     const dec = L.polylineDecorator(pts, { patterns: [{ offset: randomOffset, repeat: 120, symbol: L.Symbol.arrowHead({ pixelSize: 4, headAngle: 75, polygon: false, pathOptions: { color: currentArrowColor, weight: 1.5, opacity: 1, interactive: false }})}]}).addTo(map);
                     routeLayers.push(dec);
-                    hitboxLine.on('click', e => { L.DomEvent.stopPropagation(e); activeRouteKey = rObj.route_key; showInfoPanel(rObj.route_key, rObj.departure, rObj.arrival, rObj.mapped_flights.filter(i => isMappedFlightVisible(i, filters))); }); 
+                    hitboxLine.on('click', e => { L.DomEvent.stopPropagation(e); activeRouteKey = rObj.route_key; currentDirection = 'forward'; syncInfoPanel(); });
                     renderedRouteObjects.push({ depCoord: rObj.departure_coord, arrCoord: rObj.arrival_coord, layers: segmentsLayers, routeId: routeUID });
                 });
             }
@@ -42534,10 +42638,8 @@ function updateAirportLabels() {
             updateAirportLabels(); if(globalHasActiveFilter) updateRoutesVisibility();
 
             if (activeRouteKey && document.getElementById('info-panel').classList.contains('visible')) {
-                if (!globalHasActiveFilter) { hideInfoPanel(); } 
-                else { const c = generatedRoutes.find(r => r.route_key === activeRouteKey); const matchingFlights = c ? c.mapped_flights.filter(i => isMappedFlightVisible(i, filters)) : [];
-                    if (!c || matchingFlights.length === 0) { hideInfoPanel(); } else { showInfoPanel(c.route_key, c.departure, c.arrival, matchingFlights); }
-                }
+                if (!globalHasActiveFilter) { hideInfoPanel(); }
+                else { syncInfoPanel(); }
             }
         }
         
