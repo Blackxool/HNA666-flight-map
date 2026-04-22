@@ -5,16 +5,16 @@
 
 ## 🏎️ 更新详情
 
-2026.03.14 update: 与 [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf) 合作买了个域名 [hna666.cfd](http://hna666.cfd/)，可以直接访问（新增inxde.html ）。
+2026.03.14 update: 与 [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf) 合作买了个域名 [hna666.cfd](http://hna666.cfd/)，可以直接访问（新增index.html ）。
 依托 cloudflare 服务，加载依据网速情况，所以本仓库依然提供静态版 html 可供下载。虽然在`j`版本中已对移动端进行了诸多优化，但是移动端加载大量航线、机场还是略卡，所以还是建议使用pc端。
 （`v0822f`中`0822`为航班数据截断日期，`f`为版本名）
 
 ### **数据更新**
 
-#### 2026航季数据 (2026.04.01~2026.05.31)
+#### 2026航季数据 (2026.04.01~2026.06.30)
 | 版本 | 数据来源 | 平均每周航班数量 | 备注 |
 |:---:|:---:|:---:|:---:|
-|`v0405夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5151 / 7348 | 航班数量已较为稳定 |
+|`v0422夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5217 / 7519 | - |
 
 
 ### **版本更新**
@@ -96,3 +96,5 @@
 |:---:|:---:|:---:|:---:|
 |`v0313夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | 过渡数据 |
 |`v0323夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5079 / 7201 | 添加日期数据 |
+|`v0405夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5151 / 7348 | - |
+
