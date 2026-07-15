@@ -11,10 +11,10 @@
 
 ### **数据更新**
 
-#### 2026航季数据 (2026.05.14~2026.06.30)
+#### 2026航季数据 (2026.09.01~2026.09.23)
 | 版本 | 数据来源 | 平均每周航班数量 | 备注 |
 |:---:|:---:|:---:|:---:|
-|`v0510夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 4914 / 7082 | - |
+|`v0715夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 
 
 ### **版本更新**
@@ -98,3 +98,6 @@
 |`v0323夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5079 / 7201 | 添加日期数据 |
 |`v0405夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5151 / 7348 | - |
 |`v0422夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5217 / 7519 | - |
+|`v0510夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 4914 / 7082 | - |
+|`v0522夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v0615夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
