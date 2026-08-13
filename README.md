@@ -16,6 +16,7 @@
 |:---:|:---:|:---:|:---:|
 |`v0715夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 |`v0803夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v0813夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 
 ### **版本更新**
   - `f`移动端支持以及自动识别系统深浅设置、航班筛选。
