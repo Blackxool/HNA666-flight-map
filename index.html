@@ -32,6 +32,9 @@
 
             /* 定义核心动态尺寸变量（默认按横屏PC逻辑） */
             --btn-size: clamp(220px, 28vw, 400px); 
+            /* 标题目标宽度约为屏幕长边的 3/4，再按字数换算字号 */
+            --title-edge: calc(max(100vw, 100vh) * 0.75);
+            --title-size: clamp(48px, calc(var(--title-edge) / 12), 220px);
         }
 
         @media (prefers-color-scheme: dark) {
@@ -57,7 +60,7 @@
         @media (orientation: portrait) {
             :root {
                 /* 核心：宽度不超过屏幕 70%，同时高度不超过可用区域的一半(约38dvh)，确保上下堆叠时绝对不溢出，同时最大限制 320px */
-                --btn-size: min(70vw, 33dvh, 320px); 
+                --btn-size: min(64vw, 23dvh, 260px); 
             }
         }
 
@@ -121,17 +124,27 @@
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 110vw; 
-            font-size: max(14vw, 180px); 
+            width: max-content;
+            max-width: none;
+            font-size: var(--title-size);
             font-weight: 900; 
             line-height: 1.1; 
             color: var(--huge-text);
-            word-break: break-all; 
-            text-align: justify;
+            white-space: nowrap;
+            word-break: normal;
+            text-align: center;
             z-index: 1;
             pointer-events: none;
             user-select: none;
             mix-blend-mode: overlay; 
+        animation: bg-title-float 28s ease-in-out infinite alternate;
+        }
+
+        .bg-title-mobile { display: none; }
+
+        @keyframes bg-title-float {
+            0% { transform: translate(-52%, -48%) rotate(-2deg); }
+            100% { transform: translate(-48%, -52%) rotate(2deg); }
         }
 
         /* ========== 核心重构：安全分配布局层 ========== */
@@ -297,6 +310,58 @@
             margin: 0dvh 0;
         }
 
+
+        /* 航季组：复制或注释整个 season-group 即可维护一个航季。 */
+        .season-groups {
+            display: grid;
+            grid-template-columns: repeat(var(--group-count, 1), minmax(0, 1fr));
+            gap: calc(var(--btn-size) * 0.045);
+            width: min(94vw, calc(var(--btn-size) * 1.42));
+            margin: calc(var(--btn-size) * 0.05) 0 0;
+            padding: 0;
+            pointer-events: auto;
+            position: relative;
+            z-index: 11;
+        }
+
+        .season-group {
+            display: grid;
+            /* 一个航季组是一列；组内子按钮由上至下排列。 */
+            grid-template-columns: minmax(0, 1fr);
+            align-items: center;
+            justify-content: center;
+            gap: .55em;
+            min-width: 0;
+        }
+
+        .season-links {
+            display: contents;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .sub-link {
+            display: block;
+            white-space: nowrap;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: calc(var(--btn-size) * 0.085);
+            font-weight: 300;
+            line-height: 1.55;
+            letter-spacing: calc(var(--btn-size) * 0.02);
+            transition: transform .25s ease, color .25s ease;
+        }
+
+        .sub-link:hover,
+        .sub-link:focus-visible {
+            color: var(--text-primary);
+            transform: scale(1.06);
+            outline: none;
+        }
+
+        .sub-link.placeholder { cursor: not-allowed; opacity: .82; }
+
         /* --- 巨型按钮通用设置 --- */
         .huge-btn {
             pointer-events: auto; 
@@ -312,12 +377,21 @@
             color: var(--text-primary);
         }
 
+        .default-link {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            color: inherit;
+            text-decoration: none;
+        }
+
         .btn-content {
             position: relative;
             z-index: 10; 
             text-align: center;
             width: 100%;
             height: 100%;
+            pointer-events: none;
             display: flex;
             /* 改为纵向排列，让副标题自然跟在标题下面 */
             flex-direction: column; 
@@ -354,16 +428,55 @@
             margin-top: calc(var(--btn-size) * 0.02); 
         }
 
-        .huge-btn:hover .btn-content { transform: scale(1.08); }
+        @media (hover: hover) and (pointer: fine) {
+            .huge-btn:hover .btn-content { transform: scale(1.08); }
+        }
 
         /* --- 响应式排版逻辑 --- */
         
         /* 横屏 (PC/平板等) */
         @media (orientation: landscape) {
+            .bg-text {
+                font-size: clamp(96px, calc(var(--title-edge) / 6), 440px);
+                white-space: normal;
+            }
+            .bg-title-desktop {
+                display: block;
+                line-height: .95;
+                text-align: center;
+            }
             .main-area {
-                flex-direction: row; /* 横向排列 */
-                /* 你的逻辑：间距可以为 2/3 按钮长度 */
-                gap: calc(var(--btn-size) * 0.8); 
+                --triangle-btn-size: min(25vw, 31dvh, 290px);
+                display: grid;
+                grid-template-columns: repeat(2, var(--triangle-btn-size));
+                grid-template-rows: repeat(2, var(--triangle-btn-size));
+                align-content: center;
+                justify-content: center;
+                column-gap: calc(var(--triangle-btn-size) * .9);
+                row-gap: 0;
+            }
+            .main-area .huge-btn {
+                --btn-size: var(--triangle-btn-size);
+                width: var(--triangle-btn-size);
+                height: var(--triangle-btn-size);
+            }
+            .main-area .huge-btn[data-portal="666"] {
+                grid-column: 1;
+                grid-row: 1;
+                transform: translateY(-2%);
+            }
+            .main-area .huge-btn[data-portal="2666"] {
+                grid-column: 2;
+                grid-row: 1;
+                transform: translateY(-2%);
+            }
+            .main-area .huge-btn[data-portal="66666"] {
+                grid-column: 1 / span 2;
+                grid-row: 2;
+                justify-self: center;
+                width: calc(var(--triangle-btn-size) * .88);
+                height: calc(var(--triangle-btn-size) * .88);
+                transform: translateY(0);
             }
         }
 
@@ -376,9 +489,97 @@
             .orb-1 { width: 70vw; height: 70vw; top: -5%; left: -15%; }
             .orb-2 { width: 60vw; height: 60vw; bottom: -5%; right: -15%; }
             .orb-3 { width: 50vw; height: 50vw; top: 35%; left: 5%; }
-            .bg-text { font-size: max(24vw, 90px); line-height: 1.1; width: 120vw; }
+            .bg-text {
+                left: 4%;
+                width: max-content;
+                /* 五行标题的总高度约占屏幕高度 3/4，同时限制最长一行不超出屏宽 */
+                font-size: min(calc(75dvh / 5 / .92), calc(92vw / 3), 180px);
+                animation-name: bg-title-float-portrait;
+            }
+            .bg-title-desktop { display: none; }
+            .bg-title-mobile {
+                display: block;
+                white-space: normal;
+                line-height: .92;
+                letter-spacing: .02em;
+                text-align: center;
+            }
 
-            .btn-title { font-size: min(calc(var(--btn-size) * 1), 100px); }
+            .main-area {
+                justify-content: center;
+                will-change: transform;
+                transform: translateY(0);
+                transition: transform .62s cubic-bezier(.22, .75, .24, 1);
+            }
+
+            .huge-btn {
+                width: min(58vw, calc((100dvh - 220px) / 3), 190px);
+                height: min(58vw, calc((100dvh - 220px) / 3), 190px);
+                flex-shrink: 0;
+                will-change: width, height, opacity;
+                margin: 0;
+                transition: width .62s cubic-bezier(.22, .75, .24, 1), height .62s cubic-bezier(.22, .75, .24, 1), opacity .46s ease, margin .62s cubic-bezier(.22, .75, .24, 1);
+            }
+
+            .default-link { pointer-events: none; }
+            .btn-content { pointer-events: auto; top: 0; transition: none; }
+            .btn-title { font-size: min(calc(var(--btn-size) * .8), 88px); cursor: pointer; }
+            .season-groups {
+                display: grid;
+                visibility: hidden;
+                max-height: 0;
+                margin-top: 0;
+                overflow: hidden;
+                opacity: 0;
+                transform: translateY(-.5rem);
+                will-change: max-height, opacity, transform;
+                transition: max-height .52s cubic-bezier(.22, .75, .24, 1), margin-top .52s cubic-bezier(.22, .75, .24, 1), opacity .42s ease, transform .52s cubic-bezier(.22, .75, .24, 1), visibility 0s linear .52s;
+            }
+            .season-group { grid-template-columns: minmax(0, 1fr); }
+            .sub-link { font-size: clamp(19px, 5vw, 22px); line-height: 1.35; letter-spacing: 0; }
+
+            .main-area.mobile-expanded { gap: .5dvh; }
+            .main-area.mobile-2666-active { transform: translateY(-1dvh); }
+            .main-area.mobile-expanded .huge-btn.expanded {
+                width: min(94vw, 440px);
+                /* 单一可动画高度，避免 min-height 在切换时立即跳到大尺寸。 */
+                height: clamp(360px, 56dvh, 470px);
+                margin: 0;
+            }
+            .main-area.mobile-expanded .huge-btn.expanded .season-groups {
+                visibility: visible;
+                max-height: min(22dvh, 180px);
+                margin-top: min(2.2dvh, 18px);
+                width: min(90vw, 410px);
+                grid-template-columns: repeat(var(--group-count, 1), minmax(0, 1fr));
+                opacity: 1;
+                transform: translateY(0);
+                transition-delay: .12s, .12s, .12s, .12s, 0s;
+            }
+            .main-area.mobile-expanded .huge-btn:not(.expanded) {
+                width: min(19vw, 72px);
+                height: min(11dvh, 72px);
+                margin: 0;
+                opacity: .78;
+            }
+            .main-area.mobile-expanded .huge-btn:not(.expanded) .btn-title { font-size: min(11vw, 32px); }
+            .main-area.mobile-expanded .huge-btn:not(.expanded) .ripple { opacity: .55; }
+        }
+
+        /* 矮屏手机：为三行主按钮和展开态保留顶部、底部安全空间。 */
+        @media (orientation: portrait) and (max-height: 720px) {
+            .main-area.mobile-expanded .huge-btn.expanded {
+                height: clamp(280px, calc(100dvh - 250px), 470px);
+            }
+            .main-area.mobile-expanded .huge-btn:not(.expanded) {
+                width: min(19vw, calc((100dvh - 350px) / 5), 72px);
+                height: min(11dvh, calc((100dvh - 350px) / 5), 72px);
+            }
+        }
+
+        @keyframes bg-title-float-portrait {
+            0% { transform: translate(0, -48%); }
+            100% { transform: translate(2%, -52%); }
         }
         /* --- 幽灵水波纹 --- */
         .ripple {
@@ -422,13 +623,13 @@
             .huge-btn:hover .r1 { filter: brightness(1.1); }
             .huge-btn:hover .r2 { filter: brightness(1.05); }
         }
-
-    </style>
+</style>
 </head>
 <body>
 
     <div class="bg-text">
-        海航666航班可视化工具 海航666航班可视化工具 海航666航班可视化工具 海航666航班可视化工具 海航666-航班可视化工具 海航666-航班可视化工具
+        <span class="bg-title-desktop">海航 666 航班<br>可视化工具</span>
+        <span class="bg-title-mobile">海航<br>666<br>航班<br>可视化<br>工具</span>
     </div>
 
     <div class="bg-canvas">
@@ -446,23 +647,60 @@
         </div>
 
         <div class="main-area">
-            <a href="666.html" class="huge-btn">
+            <div class="huge-btn" data-portal="666">
                 <div class="ripple r1"></div>
                 <div class="ripple r2"></div>
+                <a class="default-link" href="666fms.html" aria-label="666，默认进入第一项"></a>
                 <div class="btn-content">
                     <span class="btn-title">666</span>
-                    <span class="btn-subtitle">2026夏秋</span>
+                    <div class="season-groups" aria-label="666 航季分组">
+                        <section class="season-group" data-season="2026夏秋">
+                            <ul class="season-links" aria-label="666 2026夏秋">
+                                <li><a class="sub-link" href="666fms.html">2026夏秋</a></li>
+                                <li><a class="sub-link" href="666rtps.html">往返规划器</a></li>
+                            </ul>
+                        <!--</section>
+                        <section class="season-group" data-season="26/27冬春">
+                            <ul class="season-links" aria-label="666 26/27冬春">
+                                <li><a class="sub-link" href="666fmw.html">26/27冬春</a></li>
+                                <li><a class="sub-link" href="666rtpw.html">往返规划器</a></li>
+                            </ul>
+                        </section>-->
+                    </div>
                 </div>
-            </a>
-            
-            <a href="2666.html" class="huge-btn">
+            </div>
+
+            <div class="huge-btn" data-portal="2666">
                 <div class="ripple r1"></div>
                 <div class="ripple r2"></div>
+                <a class="default-link" href="2666fms.html" aria-label="2666，默认进入第一项"></a>
                 <div class="btn-content">
                     <span class="btn-title">2666</span>
-                    <span class="btn-subtitle">2026夏秋</span>
+                    <div class="season-groups" aria-label="2666 航季分组">
+                        <section class="season-group" data-season="2026夏秋">
+                            <ul class="season-links" aria-label="2666 2026夏秋">
+                                <li><a class="sub-link" href="2666fms.html">2026夏秋</a></li>
+                                <li><a class="sub-link" href="2666rtps.html">往返规划器</a></li>
+                            </ul>
+                        </section>
+                        <!--<section class="season-group" data-season="26/27冬春">
+                            <ul class="season-links" aria-label="2666 26/27冬春">
+                                <li><a class="sub-link" href="2666fmw.html">26/27冬春</a></li>
+                                <li><a class="sub-link" href="2666rtpw.html">往返规划器</a></li>
+                            </ul>
+                        </section>-->
+                    </div>
                 </div>
-            </a>
+            </div>
+
+            <div class="huge-btn" data-portal="66666" data-single="true">
+                <div class="ripple r1"></div>
+                <div class="ripple r2"></div>
+                <a class="default-link" href="66666.html" aria-label="66666，进入主页面"></a>
+                <div class="btn-content">
+                    <span class="btn-title">66666</span>
+                </div>
+            </div>
         </div>
 
         <div class="disclaimer-area">
@@ -486,5 +724,62 @@
             </div>
         </div>
     </div>
+
+    <script>
+        const mainArea = document.querySelector('.main-area');
+        const portalButtons = [...document.querySelectorAll('.huge-btn[data-portal]')];
+        const portraitQuery = window.matchMedia('(orientation: portrait)');
+
+        document.querySelectorAll('.season-groups').forEach((groups) => {
+            const count = groups.querySelectorAll(':scope > .season-group').length;
+            groups.style.setProperty('--group-count', Math.max(1, count));
+            groups.classList.add(`group-count-${count}`);
+
+            groups.querySelectorAll(':scope > .season-group').forEach((group) => {
+                const itemCount = group.querySelectorAll(':scope > .season-links > li').length;
+                group.style.setProperty('--item-count', Math.max(1, itemCount));
+            });
+        });
+
+        const closeMobilePanels = () => {
+            mainArea.classList.remove('mobile-expanded', 'mobile-2666-active');
+            portalButtons.forEach((button) => {
+                button.classList.remove('expanded');
+                button.setAttribute('aria-expanded', 'false');
+            });
+        };
+
+        portalButtons.forEach((button) => {
+            button.setAttribute('aria-expanded', 'false');
+            button.addEventListener('click', (event) => {
+                if (!portraitQuery.matches || event.target.closest('.sub-link')) return;
+                if (button.dataset.single === 'true') {
+                    window.location.href = button.querySelector('.default-link').href;
+                    return;
+                }
+                const isExpanded = button.classList.contains('expanded');
+                if (isExpanded) {
+                    closeMobilePanels();
+                    return;
+                }
+
+                mainArea.classList.add('mobile-expanded');
+                mainArea.classList.toggle('mobile-2666-active', button.dataset.portal === '2666');
+                portalButtons.forEach((item) => {
+                    const active = item === button;
+                    item.classList.toggle('expanded', active);
+                    item.setAttribute('aria-expanded', String(active));
+                });
+            });
+        });
+
+        portraitQuery.addEventListener('change', (event) => {
+            if (!event.matches) closeMobilePanels();
+        });
+
+        document.querySelectorAll('[data-placeholder]').forEach((link) => {
+            link.addEventListener('click', (event) => event.preventDefault());
+        });
+    </script>
 </body>
 </html>
