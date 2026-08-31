@@ -64,7 +64,7 @@
   - 支持按大(A330 Series & B787 Series)、中(B737 Series & A320 Series)、小(ERJ Series & C909)选择机型
 
 ## 🗺️ 地图来源
-本项目基于 [Leaflet.js](https://leafletjs.com/) 地图框架构建。使用了 [CARTO](https://carto.com/) 提供的开源底图服务。部分老版本使用 [OpenStreetMap] / [高德地图] 作为底图。
+本项目基于 [Leaflet.js](https://leafletjs.com/) 地图框架构建。中国行政区划边界数据来源于阿里云 [DataV 地理小工具](https://datav.aliyun.com/portal/school/atlas/area_selector)，道路、水系及陆地等基础地理数据来源于 [Natural Earth](https://www.naturalearthdata.com/)。部分早期版本曾使用 [CARTO](https://carto.com/) / [OpenStreetMap](https://www.openstreetmap.org/) / [高德地图](https://www.amap.com/) 提供的开源底图服务。
 
 ## ⚠️ 注意事项
 
@@ -75,8 +75,6 @@
 ## 📄 授权信息
 
 可以自由使用、分发该开源内容、统计数据，但请注明原作者，勿作为商业用途。
-
-🚧 请理解：本项目起初是为个人需求开发，代码结构并不规范，不具备开箱即用的模块化封装。仅限于促进交流与协作，而非作为正式发布的开发包。
 
 ## 📄 历史数据
 
