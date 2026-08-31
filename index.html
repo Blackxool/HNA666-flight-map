@@ -205,27 +205,25 @@
             z-index: 1000;
         }
 
-        /* 胶囊外壳容器 (相对定位的锚点) */
+        /* 底栏与免责声明弹层的共同宽度锚点 */
         .custom-attribution-pill-wrapper {
-            position: relative; /* 气泡对齐的基准 */
-            display: inline-flex; /* 宽度由内部胶囊决定 */
+            position: relative;
+            display: inline-flex;
         }
 
-        /* 【主胶囊样式】 */
+        /* 与地图页一致：不使用胶囊外框，仅用文字阴影/发光增强可读性。 */
         .custom-attribution-pill {
-            background: var(--disclaimer-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(220, 220, 220, 0.6);
-            border-radius: 18px; 
-            padding: 9px 20px;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 4px 8px;
             display: flex; 
             align-items: center; 
             justify-content: center;
-            gap: 10px; 
+            gap: 6px;
             color: var(--text-secondary);
-            font-size: 12px; /* 字号根据主页放大 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            font-size: 12px;
+            text-shadow: 0 0 8px var(--bg-color), 0 0 12px var(--bg-color), 0 0 4px var(--bg-color);
             line-height: 1;
         }
 
@@ -249,45 +247,47 @@
             height: 15px;
             vertical-align: text-bottom;
             transition: filter 0.3s ease;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));
         }
         @media (prefers-color-scheme: dark) {
-            .github-mode-logo { filter: invert(1); }
-            .custom-attribution-pill { background: rgba(30, 30, 30, 0.3); }
+            .github-mode-logo { filter: invert(1) drop-shadow(0 0 6px rgba(0,0,0,0.9)); }
+            .custom-attribution-pill { text-shadow: 0 0 8px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.95), 0 0 4px rgba(0, 0, 0, 0.8); }
         }
 
         /* 【悬浮气泡弹出框】 */
         .inline-disclaimer-popup { 
             position: absolute; 
-            bottom: calc(100% + 10px); /* 在胶囊上方 10px 处弹出 */
+            bottom: calc(100% + 8px);
             
             left: 0;
             right: 0;
-            width: auto; /* 宽度不随内容自适应，强制铺满父容器 */
-            box-sizing: border-box; /* padding 不会撑大外框 */
-            background: var(--disclaimer-bg);
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px); 
-            border: 1px solid rgba(220, 220, 220, 0.6); 
-            border-radius: 18px; 
-            padding: 14px 18px; 
+            width: auto;
+            box-sizing: border-box;
+            background: rgba(245, 235, 224, 0.38);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 0;
+            border-radius: 0;
+            padding: 2px;
             font-weight: normal; 
             color: var(--text-primary); 
-            font-size: 10px;
-            line-height: 1.6; 
-            box-shadow: 0 12px 32px rgba(0,0,0,0.15); 
+            font-size: 8px;
+            line-height: 1.5;
+            box-shadow: none;
 
             opacity: 0; 
             pointer-events: none; 
             transition: opacity 0.3s ease, transform 0.3s ease; 
             transform: translateY(6px); 
-            text-align: center; 
+            text-align: justify;
+            text-indent: 2em;
             z-index: 1010;
         }
 
         /* 深色模式下的弹出框背景调整 */
         @media (prefers-color-scheme: dark) {
             .inline-disclaimer-popup { 
-                background: rgba(30, 30, 30, 0.3);
+                background: rgba(30, 30, 30, 0.38);
             }
         }
 
@@ -710,16 +710,14 @@
                     <a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank" title="可以通过提交 GitHub Issue 联系作者">
                         <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" class="github-mode-logo">
                     </a>
-                    | 
-                    <span>航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理</span>
-                    | 
+                    |
+                    <span>航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank" rel="noopener">飞友候机厅Avia</a></strong> 整理</span>
+                    |
                     <span class="disclaimer-trigger-text">免责申明</span>
                 </div>
 
                 <div class="inline-disclaimer-popup">
-                机场/机型等信息整理自公开数据，航班/航线信息仅供参考。<br>
-                网站仅提供交互式地图，所涉及公司及标识均归各自所有者。<br>
-                非商业使用/传播/修改请注明来源。禁止未授权的商业使用。
+                本项目仅供个人及非商业用途，未经授权不得用于商业使用；机场、机型、航班、航线及地图底图（来源：DataV &amp; Natural Earth）等信息整理自公开数据，仅供参考，请以有关机构发布的官方信息为准；相关公司名称、标识与商标归其权利人所有。
                 </div>
             </div>
         </div>
