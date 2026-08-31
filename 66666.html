@@ -313,21 +313,22 @@
         .legend-line::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 5px; height: 5px; border-top: 1.5px solid var(--route-arrow-color); border-right: 1.5px solid var(--route-arrow-color); }
 
         .leaflet-bottom.leaflet-right { display: none !important; }
-        .custom-attribution-float, .custom-attribution-float *, .inline-disclaimer-wrapper, .inline-disclaimer-popup { font-size: 9px; }
+        .custom-attribution-float, .custom-attribution-float *, .inline-disclaimer-wrapper { font-size: 9px; }
         .custom-attribution-float { position: fixed; z-index: 10000; pointer-events: auto; bottom: max(10px, env(safe-area-inset-bottom)); right: 10px; color: var(--text-secondary); padding: 4px 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; line-height: 1; text-shadow: 0 0 8px rgba(255, 255, 255, 0.95), 0 0 12px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.8); }
         @media (max-width: 768px) { .custom-attribution-float { left: 50%; right: auto; transform: translateX(-50%); width: max-content; justify-content: center; bottom: max(10px, env(safe-area-inset-bottom)); }}
         @media (prefers-color-scheme: dark) { .custom-attribution-float { text-shadow: 0 0 8px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.95), 0 0 4px rgba(0, 0, 0, 0.8); }}
         .custom-attribution-float a { color: var(--primary-color) !important; text-decoration: none; font-weight: bold;}
         .inline-disclaimer-wrapper { cursor: help; color: var(--text-primary); font-weight: 700; }
-        .inline-disclaimer-popup { 
+        .custom-attribution-float .inline-disclaimer-popup {
             position: absolute; bottom: calc(100% + 8px); 
             left: 0; width: 100%; box-sizing: border-box; 
-            background: var(--background-secondary); backdrop-filter: var(--backdrop-filter); -webkit-backdrop-filter: var(--backdrop-filter); 
-            border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px 14px; 
-            font-weight: normal; color: var(--text-primary); line-height: 1.5; 
-            box-shadow: 0 12px 32px var(--shadow-medium); opacity: 0; pointer-events: none; 
-            transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; transform: translateY(4px); text-align: center; 
+            background: rgba(255, 255, 255, 0.38); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 0; border-radius: 0; padding: 2px;
+            font-size: 6px; font-weight: normal; color: var(--text-primary); line-height: 1.5;
+            box-shadow: none; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; transform: translateY(4px); text-align: justify; text-indent: 2em;
         }
+        @media (prefers-color-scheme: dark) { .custom-attribution-float .inline-disclaimer-popup { background: rgba(30, 30, 30, 0.38); } }
         .inline-disclaimer-wrapper:hover .inline-disclaimer-popup, .inline-disclaimer-popup:hover { opacity: 1; transform: translateY(0); pointer-events: auto; transition-delay: 0s; }
 
         #info-panel { position: absolute; bottom: 0; z-index: 1010; width: 100vw; display: none; flex-direction: column; background: transparent; pointer-events: none; padding: 0; box-sizing: border-box; }
@@ -480,13 +481,10 @@
         <a href="https://github.com/Blackxool/HNA666-flight-map" target="_blank" title="可以通过提交 GitHub Issue 联系作者">
             <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" class="github-mode-logo">
         </a>
-        | <span>航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank">飞友候机厅Avia</a></strong> 整理</span>
-        | <span>地图来源 DataV &amp; Natural Earth</span>
+        | <span>航班数据由 <strong><a href="https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf" target="_blank" rel="noopener">飞友候机厅Avia</a></strong> 整理</span>
         | <span class="inline-disclaimer-wrapper">免责申明
             <div class="inline-disclaimer-popup">
-                机场/机型等信息整理自公开数据，航班/航线信息仅供参考。<br>
-                网站仅提供交互式地图，所涉及公司及标识均归各自所有者。<br>
-                非商业使用/传播/修改请注明来源。禁止未授权的商业使用。
+                本项目仅供个人及非商业用途，未经授权不得用于商业使用；机场、机型、航班、航线及地图底图（来源：DataV &amp; Natural Earth）等信息整理自公开数据，仅供参考，请以有关机构发布的官方信息为准；相关公司名称、标识与商标归其权利人所有。
             </div>
         </span>
     </div>
