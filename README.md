@@ -5,15 +5,10 @@
 **发现有博主偷数据，协议防君子不防小人。愿君共勉。**
 
 ## 🏎️ **数据更新**
-### 2026航季数据 (2026.09.01~2026.10.24)
+### (2026.09.23~2026.12.01)
 | 版本 | 数据来源 | 平均每周航班数量 | 备注 |
 |:---:|:---:|:---:|:---:|
-|`v0715夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0803夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0813夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0820夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0831夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-
+|`v0922`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 ## ✈️ 功能介绍
 
 本项目包含两个独立功能页，共用同一数据源，均支持移动端适配与深浅色主题。
@@ -47,7 +42,7 @@
 
 所有发布版本已上传至[夸克网盘](https://pan.quark.cn/s/617159da3ecd)。
 
-### 2025-26航季历史数据 (2025.09.01~2026.02.01 & 2026.03.14-2026.03.28)
+### 2025-26航季数据 (2025.09.01~2026.02.01 & 2026.03.14-2026.03.28)
 | 版本 | 数据来源 | 计划航班数量 | 备注 |
 |:---:|:---:|:---:|:---:|
 |`v0807夏秋`| CAAC pre-flight数据 | 5864 / 8149 | 3月份发布的计划，到9月份已大幅调整，参考价值有限 |
@@ -65,7 +60,7 @@
 
 *计划航班数量(666/2666)是推算的每个航班号每周执行次数，经停航班记为 1 次，实际执行航班应远小于等于该值。
 
-### 2026航季数据 (2026.03.29~2026.06.30)
+### 2026航季数据 (2026.03.29~2026.06.30 & 2026.09.01~2026.10.24)
 | 版本 | 数据来源 | 平均每周航班数量 | 备注 |
 |:---:|:---:|:---:|:---:|
 |`v0313夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | 过渡数据 |
@@ -75,3 +70,8 @@
 |`v0510夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 4914 / 7082 | - |
 |`v0522夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 |`v0615夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v0715夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v0803夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v0813夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v0820夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v0831夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
