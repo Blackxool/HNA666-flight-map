@@ -9,7 +9,7 @@
 ### (2026.09.30~2026.12.31)
 | 版本 | 数据来源 | 平均每周航班数量 | 备注 |
 |:---:|:---:|:---:|:---:|
-|`v1102`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v1110`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 
 ## ✈️ 功能介绍
 
@@ -82,3 +82,4 @@
 |`v1009`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 |`v1016`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 |`v1030`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v1102`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
