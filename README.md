@@ -9,7 +9,7 @@
 ### (2026.09.30~2026.12.31)
 | 版本 | 数据来源 | 平均每周航班数量 | 备注 |
 |:---:|:---:|:---:|:---:|
-|`v1110`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+|`v1116`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
 
 ## ✈️ 功能介绍
 
@@ -62,24 +62,10 @@
 
 *计划航班数量(666/2666)是推算的每个航班号每周执行次数，经停航班记为 1 次，实际执行航班应远小于等于该值。
 
-### 2026航季数据 (2026.03.29-2026.06.30 & 2026.09.01-2026.12.31)
-| 版本 | 数据来源 | 平均每周航班数量 | 备注 |
-|:---:|:---:|:---:|:---:|
-|`v0313夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | 过渡数据 |
-|`v0323夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5079 / 7201 | 添加日期数据 |
-|`v0405夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5151 / 7348 | - |
-|`v0422夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 5217 / 7519 | - |
-|`v0510夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | 4914 / 7082 | - |
-|`v0522夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0615夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0715夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0803夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0813夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0820夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0831夏秋`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0922`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v0929`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v1009`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v1016`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v1030`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
-|`v1102`| [飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理 | - / - | - |
+### 2026航季数据 (2026.03.29-2026.06.30 & 2026.09.01-2027.01.22)
+以下数据来源：[飞友候机厅Avia](https://www.xiaohongshu.com/user/profile/5f7c96d900000000010033bf)整理。
+
+| `v0313夏秋` | `v0323夏秋` | `v0405夏秋` | `v0422夏秋` | `v0510夏秋` | `v0522夏秋` |
+| `v0615夏秋` | `v0715夏秋` | `v0803夏秋` | `v0813夏秋` | `v0820夏秋` | `v0831夏秋` |
+| `v0922` | `v0929` | `v1009` | `v1016` | `v1030` | `v1102` |
+| `v1110` |  |  |  |  |  |
